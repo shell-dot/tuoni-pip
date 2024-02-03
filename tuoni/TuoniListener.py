@@ -1,4 +1,4 @@
-from TuoniLib.TuoniExceptions import *
+from tuoni.TuoniExceptions import *
 
 class TuoniListener:
     def __init__(self, conf, c2):

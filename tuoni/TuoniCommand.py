@@ -1,6 +1,6 @@
 import time
-from TuoniLib.TuoniExceptions import *
-from TuoniLib.TuoniResult import *
+from tuoni.TuoniExceptions import *
+from tuoni.TuoniResult import *
 
 
 class TuoniCommand:

@@ -1,6 +1,6 @@
-from TuoniLib.TuoniExceptions import *
-from TuoniLib.TuoniCommand import *
-from TuoniLib.TuoniDefaultCommands import *
+from tuoni.TuoniExceptions import *
+from tuoni.TuoniCommand import *
+from tuoni.TuoniDefaultCommands import *
 
 class TuoniAgent:
     def __init__(self, conf, c2):

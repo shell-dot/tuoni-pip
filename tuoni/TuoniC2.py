@@ -3,10 +3,10 @@ import requests
 import json
 import threading
 import shutil
-from TuoniLib.TuoniExceptions import *
-from TuoniLib.TuoniListenerPlugin import *
-from TuoniLib.TuoniListener import *
-from TuoniLib.TuoniAgent import *
+from tuoni.TuoniExceptions import *
+from tuoni.TuoniListenerPlugin import *
+from tuoni.TuoniListener import *
+from tuoni.TuoniAgent import *
 
 
 class TuoniC2:

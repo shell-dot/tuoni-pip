@@ -1,5 +1,5 @@
 import json
-from TuoniLib.TuoniExceptions import *
+from tuoni.TuoniExceptions import *
 
 
 class TuoniResultPart:

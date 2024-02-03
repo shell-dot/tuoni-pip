@@ -1,5 +1,5 @@
 import random
-from TuoniLib.TuoniListener import *
+from tuoni.TuoniListener import *
 
 class TuoniListenerPlugin:
     def __init__(self, conf, c2):

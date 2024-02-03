@@ -1,4 +1,4 @@
-from TuoniLib.TuoniResultPart import *
+from tuoni.TuoniResultPart import *
 
 
 class TuoniResult:
