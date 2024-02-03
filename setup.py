@@ -1,22 +1,22 @@
 from distutils.core import setup
 setup(
-  name = 'TuoniLib',
-  packages = ['TuoniLib'],
-  version = '0.1.1',
+  name = 'tuoni',
+  packages = ['tuoni'],
+  version = '0.1',
   license='MIT', 
   description = 'Library to interact with Tuoni C2 API',
   author = 'Jaanus Kääp',
   author_email = 'jaanus.kaap@gmail.com',
   url = 'https://github.com/shell-dot/TuoniLib',
-  download_url = 'https://github.com/shell-dot/TuoniLib/archive/refs/tags/v_01_1.tar.gz',
-  keywords = ['TUONI'],
+  download_url = 'https://github.com/shell-dot/TuoniLib/archive/refs/tags/v_01.tar.gz',
+  keywords = ['tuoni'],
   install_requires=['requests'],
   classifiers=[
-    'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
-    'Intended Audience :: Developers',      # Define that your audience are developers
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
     'Topic :: Software Development :: Build Tools',
-    'License :: OSI Approved :: MIT License',   # Again, pick a license
-    'Programming Language :: Python :: 3',      #Specify which pyhton versions that you want to support
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
