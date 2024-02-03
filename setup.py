@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'TuoniLib',
   packages = ['TuoniLib'],
-  version = '0.1',
+  version = '0.1.1',
   license='MIT', 
   description = 'Library to interact with Tuoni C2 API',
   author = 'Jaanus Kääp',
   author_email = 'jaanus.kaap@gmail.com',
   url = 'https://github.com/shell-dot/TuoniLib',
-  download_url = 'https://github.com/shell-dot/TuoniLib/archive/refs/tags/v_01.tar.gz',
+  download_url = 'https://github.com/shell-dot/TuoniLib/archive/refs/tags/v_01_1.tar.gz',
   keywords = ['TUONI'],
   install_requires=['requests'],
   classifiers=[
