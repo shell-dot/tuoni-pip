@@ -8,7 +8,7 @@ setup(
   author = 'Jaanus Kääp',
   author_email = 'jaanus.kaap@gmail.com',
   url = 'https://github.com/shell-dot/TuoniLib',
-  download_url = 'https://github.com/shell-dot/TuoniLib/archive/v_01.tar.gz',
+  download_url = 'https://github.com/shell-dot/TuoniLib/archive/refs/tags/v_01.tar.gz',
   keywords = ['TUONI'],
   install_requires=['requests'],
   classifiers=[
