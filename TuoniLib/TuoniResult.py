@@ -10,7 +10,7 @@ class TuoniResult:
         self.status = conf["status"]
         self.received = conf["received"]
         self.parts = []
-        for part_conf in conf["childResultResponses"]:
+        for part_conf in conf["childResults"]:
             part_obj = TuoniResultPart(part_conf, self.c2)
             self.parts.append(part_obj)
 
