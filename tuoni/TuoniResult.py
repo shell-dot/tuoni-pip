@@ -8,6 +8,7 @@ class TuoniResult:
 
     def _load_conf(self, conf):
         self.status = conf["status"]
+        self.error_message = conf["errorMessage"]
         self.received = conf["received"]
         self.parts = []
         for part_conf in conf["childResults"]:

@@ -16,12 +16,13 @@ class TuoniAgent:
         self.recentListeners = conf["recentListeners"]
         self.availableCommands = conf["availableCommands"]
 
-    def send_command(self, command_type, command_conf=None, execution_conf = None):
+    def send_command(self, command_type, command_conf=None, execution_conf = None, files = None):
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
         if isinstance(command_type, TuoniDefaultCommand):
             command_conf = command_type.command_conf
             execution_conf = command_type.execution_conf
+            files = command_type.files
             command_type = command_type.command_type
         if command_conf is None:
             command_conf = {}
@@ -31,7 +32,7 @@ class TuoniAgent:
         }
         if execution_conf is not None:
             data["execConf"] = execution_conf
-        data = self.c2.request_post("/api/v1/agents/%s/commands" % self.guid, data)
+        data = self.c2.request_post("/api/v1/agents/%s/commands" % self.guid, data, files)
         return TuoniCommand(data, self.c2)
 
     def get_commands(self):

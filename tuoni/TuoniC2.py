@@ -68,10 +68,19 @@ class TuoniC2:
             shutil.copyfileobj(response.raw, out_file)
         del response
 
-    def request_post(self, uri, json_data = None):
+    def request_post(self, uri, json_data = None, files = None):
         self._request_check()
         headers = {"Authorization": "Bearer " + self.token}
-        response = requests.post("%s%s" % (self.url, uri), headers=headers, verify=False, json=json_data)
+        response = None
+        if files is None:
+            response = requests.post("%s%s" % (self.url, uri), headers=headers, verify=False, json=json_data)
+        else:
+            all_data = {}
+            if json_data is not None:
+                all_data["requestBody"] = (None, json.dumps(json_data), 'application/json')
+            for var_name in files:
+                all_data[var_name] = (files[var_name][0], files[var_name][1], 'application/octet-stream')
+            response = requests.post("%s%s" % (self.url, uri), headers=headers, verify=False, files=all_data)
         if response.status_code != 200:
             TuoniC2._raise_request_exception(response.text)
         if response.text == "":
@@ -124,7 +133,7 @@ class TuoniC2:
             agents.append(agent_obj)
         return agents
 
-    def wait_new_agent(self, interval = 1):
+    def wait_new_agent(self, interval = 1, max_wait = 0):
         agents_data = self.request_get("/api/v1/agents")
         original_agents = []
         for agent_data in agents_data:
@@ -135,6 +144,10 @@ class TuoniC2:
             for agent_data in agents_data:
                 if agent_data["guid"] not in original_agents:
                     return TuoniAgent(agent_data, self)
+            if max_wait > 0:
+                max_wait -= interval
+                if max_wait <= 0:
+                    return None
 
     def on_new_agent(self, function, interval = 1):
         monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval, ), daemon=True)

@@ -50,10 +50,14 @@ class TuoniCommand:
             return None
         return TuoniResult(self.result, self.c2)
 
-    def wait_result(self, interval = 1):
+    def wait_result(self, interval = 1, maxWait = 0):
         self.reload()
         while self.result is None:
             time.sleep(interval)
             self.reload()
+            if maxWait > 0:
+                maxWait -= interval
+                if maxWait <= 0:
+                    return None
         return TuoniResult(self.result, self.c2)
 
