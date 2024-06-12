@@ -7,6 +7,7 @@ from tuoni.TuoniExceptions import *
 from tuoni.TuoniListenerPlugin import *
 from tuoni.TuoniListener import *
 from tuoni.TuoniAgent import *
+from tuoni.TuoniPayloadPlugin import *
 
 
 class TuoniC2:
@@ -124,6 +125,28 @@ class TuoniC2:
             listener_obj = TuoniListener(listener_data, self)
             listeners.append(listener_obj)
         return listeners
+
+    def load_payload_plugins(self):
+        plugins_data = self.request_get("/api/v1/plugins/payloads")
+        plugins = {}
+        for plugin_name in plugins_data:
+            plugin_data = plugins_data[plugin_name]
+            plugin_obj = TuoniPayloadPlugin(plugin_data, self)
+            plugins[plugin_obj.plugin_id] = plugin_obj
+        return plugins
+
+    def create_payload(self, payload_template, payload_listener, payload_conf, encrypted = True):
+        json_data = {
+            "payloadTemplateId": payload_template,
+            "configuration": payload_conf,
+            "listenerId": payload_listener,
+            "encrypted": encrypted
+        }
+        payload_data = self.request_post("/api/v1/payloads", json_data)
+        return payload_data["id"]
+        
+    def download_payload(self, payload_id, file_name):
+        self.request_get_file("/api/v1/payloads/%d/download" % (payload_id), file_name)
 
     def load_agents(self):
         agents_data = self.request_get("/api/v1/agents")

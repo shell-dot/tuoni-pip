@@ -31,9 +31,4 @@ class TuoniListener:
         self.c2.request_delete("/api/v1/listeners/%d" % self.listener_id)
         self.listener_id = None
 
-    def generate_agent(self, agent_type, file_name):
-        if self.listener_id is None:
-            raise ExceptionTuoniDeleted("")
-        self.c2.request_get_file("/api/v1/listeners/%d/generate-payload?payloadType=%s" % (self.listener_id, agent_type), file_name)
-
 

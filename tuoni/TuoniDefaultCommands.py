@@ -39,8 +39,8 @@ class ExecutionExisting:
 ## Native commands
 #########################
 class TuoniCommandBof(TuoniDefaultCommand):
-    def __init__(self, bof_file, method, input):
-        super().__init__("bof", {"method": method, "inputArgs": input})
+    def __init__(self, bof_file, method =  "go", inputArgs = None, inputArgsEncoding = None, inputAsBytes = None):
+        super().__init__("bof", {"method": method, "inputArgs": inputArgs, "inputArgsEncoding": inputArgsEncoding, "inputAsBytes": inputAsBytes})
         self.files = {"bofFile": ["filename.bin", bof_file]}
 
 
@@ -55,13 +55,13 @@ class TuoniCommandDie(TuoniDefaultCommand):
 
 
 class TuoniCommandLs(TuoniDefaultCommand):
-    def __init__(self, dir, depth):
+    def __init__(self, dir, depth = 1):
         super().__init__("ls", {"dir": dir, "depth": depth})
 
 
 class TuoniCommandCmd(TuoniDefaultPluginCommand):
-    def __init__(self, command):
-        super().__init__("cmd", {"command": command})
+    def __init__(self, command, stdin = None, outputEncoding = None):
+        super().__init__("cmd", {"command": command, "stdin": stdin, "outputEncoding": outputEncoding})
 
 
 class TuoniCommandJobs(TuoniDefaultPluginCommand):
@@ -75,13 +75,13 @@ class TuoniCommandProclist(TuoniDefaultPluginCommand):
 
 
 class TuoniCommandRun(TuoniDefaultPluginCommand):
-    def __init__(self, cmdline, output):
-        super().__init__("run", {"cmdline": cmdline, "output": output})
+    def __init__(self, cmdline, output = True, stdin = None, unicode = None, outputEncoding = None):
+        super().__init__("run", {"cmdline": cmdline, "output": output, "stdin": stdin, "unicode": unicode, "outputEncoding": outputEncoding})
 
 
 class TuoniCommandPowershell(TuoniDefaultPluginCommand):
-    def __init__(self, command):
-        super().__init__("powershell", {"command": command})
+    def __init__(self, command = None, stdin = None, outputEncoding = None):
+        super().__init__("powershell", {"command": command, "stdin": stdin, "outputEncoding": outputEncoding})
 
 
 class TuoniCommandSleep(TuoniDefaultPluginCommand):
@@ -91,9 +91,9 @@ class TuoniCommandSleep(TuoniDefaultPluginCommand):
 #########################
 ## Native token commands
 #########################
-class TuoniCommandTokenAdd(TuoniDefaultPluginCommand):
+class TuoniCommandTokenSteal(TuoniDefaultPluginCommand):
     def __init__(self, pid):
-        super().__init__("token-add", {"pid": pid})
+        super().__init__("token-steal", {"pid": pid})
 
 
 class TuoniCommandTokenDeleteAll(TuoniDefaultPluginCommand):
@@ -125,20 +125,36 @@ class TuoniCommandTokenUse(TuoniDefaultPluginCommand):
 ## Plugin FS commands
 #########################
 
-class TuoniCommandFileDelete(TuoniDefaultPluginCommand):
+class TuoniCommandRm(TuoniDefaultPluginCommand):
     def __init__(self, filepath, execution_conf = None):
-        super().__init__("fs-delete", {"filepath": filepath}, execution_conf)
+        super().__init__("rm", {"filepath": filepath}, execution_conf)
 
 
-class TuoniCommandFileRead(TuoniDefaultPluginCommand):
+class TuoniCommandDownload(TuoniDefaultPluginCommand):
     def __init__(self, filepath, execution_conf = None):
-        super().__init__("fs-read", {"filepath": filepath}, execution_conf)
+        super().__init__("download", {"filepath": filepath}, execution_conf)
 
 
-class TuoniCommandFileWrite(TuoniDefaultPluginCommand):
+class TuoniCommandUpload(TuoniDefaultPluginCommand):
     def __init__(self, filepath, data, execution_conf = None):
-        super().__init__("fs-write", {"filepath": filepath}, execution_conf)
+        super().__init__("upload", {"filepath": filepath}, execution_conf)
         self.files = {"file": ["filename.bin", data]}
+
+
+class TuoniCommandCp(TuoniDefaultPluginCommand):
+    def __init__(self, file_from, file_to, execution_conf = None):
+        super().__init__("cp", {"from": file_from, "to": file_to}, execution_conf)
+
+
+class TuoniCommandMv(TuoniDefaultPluginCommand):
+    def __init__(self, file_from, file_to, execution_conf = None):
+        super().__init__("mv", {"from": file_from, "to": file_to}, execution_conf)
+
+
+class TuoniCommandMkdir(TuoniDefaultPluginCommand):
+    def __init__(self, dirpath, execution_conf = None):
+        super().__init__("mkdir", {"dirpath": dirpath}, execution_conf)
+
 
 #########################
 ## Plugin NET commands
@@ -158,7 +174,7 @@ class TuoniCommandConnectTcp(TuoniDefaultPluginCommand):
 #########################
 
 
-class TuoniCommandExecAsm(TuoniDefaultPluginCommand):
+class TuoniCommandexecuteAssembly(TuoniDefaultPluginCommand):
     def __init__(self, executable, parameters, execution_conf = None):
         super().__init__("execute-assembly", {"parameters": parameters}, execution_conf)
         self.files = {"executable": ["filename.bin", executable]}
@@ -175,6 +191,40 @@ class TuoniCommandProcinfo(TuoniDefaultPluginCommand):
         super().__init__("procinfo", {}, execution_conf)
 
 
+class TuoniCommandScreenshot(TuoniDefaultPluginCommand):
+    def __init__(self, execution_conf = None):
+        super().__init__("screenshot", {}, execution_conf)
+
+
 class TuoniCommandSpawn(TuoniDefaultPluginCommand):
-    def __init__(self, listener_id, payload_type, encrypted_communication, execution_conf = None):
-        super().__init__("spawn", {"listenerId": listener_id, "payloadType": payload_type, "encryptedCommunication": encrypted_communication}, execution_conf)
+    def __init__(self, payloadId, encrypted_communication = True, execution_conf = None):
+        super().__init__("spawn", {"payloadId": payloadId, "encryptedCommunication": encrypted_communication}, execution_conf)
+
+
+class TuoniCommandJumpService(TuoniDefaultPluginCommand):
+    def __init__(self, payloadId = None, copyMethod = None, copyPath = None, target = None, servicePath = None, serviceName = None, serviceDisplayName = None, cleanup = None, username = None, password = None, execution_conf = None):
+        super().__init__("jump-service", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "servicePath":  servicePath, "serviceName":  serviceName, "serviceDisplayName":  serviceDisplayName, "cleanup":  cleanup, "username":  username, "password": password}, execution_conf)
+
+
+class TuoniCommandJumpWinrm(TuoniDefaultPluginCommand):
+    def __init__(self, payloadId = None, copyMethod = None, copyPath = None, target = None, executablePath = None, customPowershell = None, username = None, password = None, execution_conf = None):
+        super().__init__("jump-winrm", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "executablePath":  executablePath, "customPowershell":  customPowershell, "username":  username, "password": password}, execution_conf)
+
+
+class TuoniCommandJumpWmi(TuoniDefaultPluginCommand):
+    def __init__(self, payloadId = None, copyMethod = None, copyPath = None, target = None, cmdline = None, username = None, password = None, execution_conf = None):
+        super().__init__("jump-wmi", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "cmdline":  cmdline, "username":  username, "password": password}, execution_conf)
+
+
+class TuoniCommandJumpSsh(TuoniDefaultPluginCommand):
+    def __init__(self, payloadId = None, copyMethod = None, copyPath = None, target = None, cmdline = None, username = None, password = None, privateKeyPEM = None, privateKeyPassword = None, execution_conf = None):
+        super().__init__("jump-wmi", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "cmdline":  cmdline, "username":  username, "password": password, "privateKeyPassword": privateKeyPassword}, execution_conf)
+        self.files = {"privateKeyPEM": ["private.pem", privateKeyPEM]}
+
+#########################
+## Other commands
+#########################
+class TuoniCommandReverseShellCommunication(TuoniDefaultCommand):
+    def __init__(self, input):
+        super().__init__("cd", {"input": input})
+        

@@ -4,8 +4,8 @@ from tuoni.TuoniDefaultCommands import *
 
 class TuoniAgent:
     def __init__(self, conf, c2):
-        self._load_conf(conf)
         self.c2 = c2
+        self._load_conf(conf)
 
     def _load_conf(self, conf):
         self.guid = conf["guid"]
@@ -14,7 +14,7 @@ class TuoniAgent:
         self.metadata = conf["metadata"]
         self.active = conf["active"]
         self.recentListeners = conf["recentListeners"]
-        self.availableCommands = conf["availableCommands"]
+        self.fill_available_commands(conf["availableCommandTemplates"])
 
     def send_command(self, command_type, command_conf=None, execution_conf = None, files = None):
         if self.guid is None:
@@ -51,4 +51,11 @@ class TuoniAgent:
             raise ExceptionTuoniDeleted("")
         self.c2.request_delete("/api/v1/agents/%s" % self.guid)
         self.listener_id = None
+        
+    def fill_available_commands(self, command_list):
+        self.availableCommands = {}
+        for cmd in self.c2.request_get("/api/v1/command-templates"):
+            if cmd["id"] in command_list:
+                self.availableCommands[cmd["name"]] = cmd["id"]
+            
 

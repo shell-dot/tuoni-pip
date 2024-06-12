@@ -8,7 +8,12 @@ class TuoniListenerPlugin:
         self.description = conf["info"]["description"]
         self.plugin_id = conf["identifier"]["id"]
         self.conf_schema = conf["configurationSchema"]
-        self.conf_default = conf["defaultConfiguration"]
+        self.conf_examples = {}
+        if "defaultConfiguration" in conf:
+            self.conf_examples["default"] = conf["defaultConfiguration"]
+        if "exampleConfigurations" in conf:
+            for example in conf["exampleConfigurations"]:
+                self.conf_examples[example["name"]] = example["configuration"]
         self.c2 = c2
 
     def create(self, new_listener_conf, new_listener_name=None):
