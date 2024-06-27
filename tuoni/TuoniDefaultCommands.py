@@ -218,7 +218,7 @@ class TuoniCommandJumpWmi(TuoniDefaultPluginCommand):
 
 class TuoniCommandJumpSsh(TuoniDefaultPluginCommand):
     def __init__(self, payloadId = None, copyMethod = None, copyPath = None, target = None, cmdline = None, username = None, password = None, privateKeyPEM = None, privateKeyPassword = None, execution_conf = None):
-        super().__init__("jump-wmi", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "cmdline":  cmdline, "username":  username, "password": password, "privateKeyPassword": privateKeyPassword}, execution_conf)
+        super().__init__("jump-ssh", {"payloadId":  payloadId, "copyMethod":  copyMethod, "copyPath":  copyPath, "target":  target, "cmdline":  cmdline, "username":  username, "password": password, "privateKeyPassword": privateKeyPassword}, execution_conf)
         self.files = {"privateKeyPEM": ["private.pem", privateKeyPEM]}
 
 #########################
