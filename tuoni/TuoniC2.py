@@ -3,6 +3,7 @@ import requests
 import json
 import threading
 import shutil
+import base64
 from tuoni.TuoniExceptions import *
 from tuoni.TuoniListenerPlugin import *
 from tuoni.TuoniListener import *
@@ -12,23 +13,16 @@ from tuoni.TuoniPayloadPlugin import *
 
 class TuoniC2:
     def __init__(self):
-        self.token = None
-        self.url = None
-        self.monitoring_threads = []
+        self.token: str = None
+        self.url: str = None
+        self.monitoring_threads: list = []
 
-    def login(self, url, username, password):
+    def login(self, url: str, username: str, password: str):
         headers = {
-            "Authorization":
-                "Basic " +
-                base64
-                .b64encode(
-                    (username + ":" + password)
-                    .encode('utf-8')
-                )
-                .decode('utf-8')
+            "Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('utf-8')
         }
 
-        response = requests.request("POST", "%s/api/v1/auth/login" % url, headers=headers, verify=False)
+        response = requests.post(f"{url}/api/v1/auth/login", headers=headers, verify=False)
         if response.status_code != 200:
             raise ExceptionTuoniAuthentication(response.text)
         self.token = response.text
@@ -38,104 +32,67 @@ class TuoniC2:
         if self.token is None:
             raise ExceptionTuoniAuthentication("You have not done the login")
 
-    def _raise_request_exception(result_msg):
-        msg = result_msg
+    @staticmethod
+    def _raise_request_exception(result_msg: str):
         try:
             data = json.loads(result_msg)
-            msg = data["message"]
-        except:
-            pass
+            msg = data.get("message", result_msg)
+        except json.JSONDecodeError:
+            msg = result_msg
         raise ExceptionTuoniRequestFailed(msg)
 
-    def request_get(self, uri, result_as_json=True):
+    def _make_request(self, method: str, uri: str, **kwargs):
         self._request_check()
-        headers = {"Authorization": "Bearer " + self.token}
-        response = requests.get("%s%s" % (self.url, uri), headers=headers, verify=False)
+        headers = {"Authorization": f"Bearer {self.token}"}
+        response = requests.request(method, f"{self.url}{uri}", headers=headers, verify=False, **kwargs)
         if response.status_code != 200:
-            TuoniC2._raise_request_exception(response.text)
+            self._raise_request_exception(response.text)
+        return response
+
+    def request_get(self, uri: str, result_as_json: bool = True):
+        response = self._make_request("GET", uri)
         if response.text == "":
             return None
-        if result_as_json:
-            return json.loads(response.text)
-        return response.text
+        return json.loads(response.text) if result_as_json else response.text
 
-    def request_get_file(self, uri, file_name):
-        self._request_check()
-        headers = {"Authorization": "Bearer " + self.token}
-        response = requests.get("%s%s" % (self.url, uri), headers=headers, verify=False, stream=True)
-        if response.status_code != 200:
-            TuoniC2._raise_request_exception(response.text)
+    def request_get_file(self, uri: str, file_name: str):
+        response = self._make_request("GET", uri, stream=True)
         with open(file_name, 'wb') as out_file:
             shutil.copyfileobj(response.raw, out_file)
-        del response
 
-    def request_post(self, uri, json_data = None, files = None):
-        self._request_check()
-        headers = {"Authorization": "Bearer " + self.token}
-        response = None
+    def request_post(self, uri: str, json_data: dict = None, files: dict = None):
         if files is None:
-            response = requests.post("%s%s" % (self.url, uri), headers=headers, verify=False, json=json_data)
+            response = self._make_request("POST", uri, json=json_data)
         else:
             all_data = {}
             if json_data is not None:
                 all_data["requestBody"] = (None, json.dumps(json_data), 'application/json')
-            for var_name in files:
-                all_data[var_name] = (files[var_name][0], files[var_name][1], 'application/octet-stream')
-            response = requests.post("%s%s" % (self.url, uri), headers=headers, verify=False, files=all_data)
-        if response.status_code != 200:
-            TuoniC2._raise_request_exception(response.text)
-        if response.text == "":
-            return None
-        return json.loads(response.text)
+            for var_name, file_info in files.items():
+                all_data[var_name] = (file_info[0], file_info[1], 'application/octet-stream')
+            response = self._make_request("POST", uri, files=all_data)
+        return json.loads(response.text) if response.text else None
 
-    def request_put(self, uri, json_data = None):
-        self._request_check()
-        headers = {"Authorization": "Bearer " + self.token}
-        response = requests.put("%s%s" % (self.url, uri), headers=headers, verify=False, json=json_data)
-        if response.status_code != 200:
-            TuoniC2._raise_request_exception(response.text)
-        if response.text == "":
-            return None
-        return json.loads(response.text)
+    def request_put(self, uri: str, json_data: dict = None):
+        response = self._make_request("PUT", uri, json=json_data)
+        return json.loads(response.text) if response.text else None
 
-    def request_delete(self, uri, json_data = None):
-        self._request_check()
-        headers = {"Authorization": "Bearer " + self.token}
-        response = requests.delete("%s%s" % (self.url, uri), headers=headers, verify=False, json=json_data)
-        if response.status_code != 200:
-            TuoniC2._raise_request_exception(response.text)
-        if response.text == "":
-            return None
-        return json.loads(response.text)
+    def request_delete(self, uri: str, json_data: dict = None):
+        response = self._make_request("DELETE", uri, json=json_data)
+        return json.loads(response.text) if response.text else None
 
     def load_listener_plugins(self):
         plugins_data = self.request_get("/api/v1/plugins/listeners")
-        plugins = {}
-        for plugin_name in plugins_data:
-            plugin_data = plugins_data[plugin_name]
-            plugin_obj = TuoniListenerPlugin(plugin_data, self)
-            plugins[plugin_obj.plugin_id] = plugin_obj
-        return plugins
+        return {plugin_data["plugin_id"]: TuoniListenerPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
 
     def load_listeners(self):
         listeners_data = self.request_get("/api/v1/listeners")
-        listeners = []
-        for listener_id in listeners_data:
-            listener_data = listeners_data[listener_id]
-            listener_obj = TuoniListener(listener_data, self)
-            listeners.append(listener_obj)
-        return listeners
+        return [TuoniListener(listener_data, self) for listener_data in listeners_data.values()]
 
     def load_payload_plugins(self):
         plugins_data = self.request_get("/api/v1/plugins/payloads")
-        plugins = {}
-        for plugin_name in plugins_data:
-            plugin_data = plugins_data[plugin_name]
-            plugin_obj = TuoniPayloadPlugin(plugin_data, self)
-            plugins[plugin_obj.plugin_id] = plugin_obj
-        return plugins
+        return {plugin_data["plugin_id"]: TuoniPayloadPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
 
-    def create_payload(self, payload_template, payload_listener, payload_conf, encrypted = True):
+    def create_payload(self, payload_template: str, payload_listener: str, payload_conf: dict, encrypted: bool = True):
         json_data = {
             "payloadTemplateId": payload_template,
             "configuration": payload_conf,
@@ -144,23 +101,16 @@ class TuoniC2:
         }
         payload_data = self.request_post("/api/v1/payloads", json_data)
         return payload_data["id"]
-        
-    def download_payload(self, payload_id, file_name):
-        self.request_get_file("/api/v1/payloads/%d/download" % (payload_id), file_name)
+
+    def download_payload(self, payload_id: int, file_name: str):
+        self.request_get_file(f"/api/v1/payloads/{payload_id}/download", file_name)
 
     def load_agents(self):
         agents_data = self.request_get("/api/v1/agents")
-        agents = []
-        for agent_data in agents_data:
-            agent_obj = TuoniAgent(agent_data, self)
-            agents.append(agent_obj)
-        return agents
+        return [TuoniAgent(agent_data, self) for agent_data in agents_data]
 
-    def wait_new_agent(self, interval = 1, max_wait = 0):
-        agents_data = self.request_get("/api/v1/agents")
-        original_agents = []
-        for agent_data in agents_data:
-            original_agents.append(agent_data["guid"])
+    def wait_new_agent(self, interval: int = 1, max_wait: int = 0):
+        original_agents = {agent_data["guid"] for agent_data in self.request_get("/api/v1/agents")}
         while True:
             time.sleep(interval)
             agents_data = self.request_get("/api/v1/agents")
@@ -172,25 +122,21 @@ class TuoniC2:
                 if max_wait <= 0:
                     return None
 
-    def on_new_agent(self, function, interval = 1):
-        monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval, ), daemon=True)
+    def on_new_agent(self, function, interval: int = 1):
+        monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval), daemon=True)
         monitor_thread.start()
         self.monitoring_threads.append(monitor_thread)
 
-    def _monitor_for_new_agents(self, function, interval=1):
-        agents_data = self.request_get("/api/v1/agents")
-        original_agents = []
-        for agent_data in agents_data:
-            original_agents.append(agent_data["guid"])
+    def _monitor_for_new_agents(self, function, interval: int = 1):
+        original_agents = {agent_data["guid"] for agent_data in self.request_get("/api/v1/agents")}
         while True:
             time.sleep(interval)
             agents_data = self.request_get("/api/v1/agents")
             for agent_data in agents_data:
                 if agent_data["guid"] not in original_agents:
-                    original_agents.append(agent_data["guid"])
+                    original_agents.add(agent_data["guid"])
                     agent = TuoniAgent(agent_data, self)
-                    agent_event_thread = threading.Thread(target=function, args=(agent, ))
-                    agent_event_thread.start()
+                    threading.Thread(target=function, args=(agent,)).start()
 
     def let_it_run(self):
         for monitoring_thread in self.monitoring_threads:
