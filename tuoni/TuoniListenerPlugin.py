@@ -28,8 +28,10 @@ class TuoniListenerPlugin:
         return listener_obj
 
     def get_default_conf(self):
-        return self.conf_default
+        if "default" in self.conf_examples:
+            return self.conf_examples["default"]
+        return {}  #Might change but let's say for now that if no "default" conf then empty conf is same
 
     def get_minimal_conf(self):
-        return self.conf_default
+        return self.get_default_conf()
 
