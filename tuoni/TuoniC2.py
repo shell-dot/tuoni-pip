@@ -92,12 +92,13 @@ class TuoniC2:
         plugins_data = self.request_get("/api/v1/plugins/payloads")
         return {plugin_data["identifier"]["id"]: TuoniPayloadPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
 
-    def create_payload(self, payload_template: str, payload_listener: str, payload_conf: dict, encrypted: bool = True):
+    def create_payload(self, payload_template: str, payload_listener: str, payload_conf: dict, encrypted: bool = True, payload_name: str = None):
         json_data = {
             "payloadTemplateId": payload_template,
             "configuration": payload_conf,
             "listenerId": payload_listener,
-            "encrypted": encrypted
+            "encrypted": encrypted,
+            "name": payload_name
         }
         payload_data = self.request_post("/api/v1/payloads", json_data)
         return payload_data["id"]
