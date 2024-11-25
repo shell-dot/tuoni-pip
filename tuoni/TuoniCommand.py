@@ -5,18 +5,25 @@ from tuoni.TuoniResult import *
 
 class TuoniCommand:
     """
-    Class providing data and functionality of the sent command
+    A class that provides data and functionality for a sent command.
 
     Attributes:
-        command_id (int): Command id
-        configuration (dict): Command configuration
-        execConf (dict): Execution configuration
-        created (datetime): When command was created
-        sent (datetime): When command was sent
-        result (dict): Result raw data of the command
+        command_id (int): The unique identifier of the command.
+        configuration (dict): The configuration settings for the command.
+        execConf (dict): The execution configuration for the command.
+        created (str): The time, as a string, indicating when the command was created.
+        sent (str): The time, as a string, indicating when the command was sent.
+        result (TuoniResult): The result data returned from the command execution.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the command class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self._load_conf(conf)
         self.c2 = c2
 
@@ -30,7 +37,7 @@ class TuoniCommand:
 
     def reload(self):
         """
-        Reload command data from C2
+        Reload the command data from the C2 server.
         """
         if self.command_id is None:
             raise ExceptionTuoniDeleted("")
@@ -39,10 +46,10 @@ class TuoniCommand:
 
     def result_status_done(self, reload = True):
         """
-        Is command done
-
-        Attributes:
-            reload (bool): Should the data be reloaded from server
+        Check if the command has completed.
+    
+        Args:
+            reload (bool): If True, reload the command data from the server to verify the current status.
         """
         if self.command_id is None:
             raise ExceptionTuoniDeleted("")
@@ -55,10 +62,10 @@ class TuoniCommand:
 
     def result_status_ongoing(self, reload = True):
         """
-        Is command ongoing
+        Check if the command is still ongoing.
 
-        Attributes:
-            reload (bool): Should the data be reloaded from server
+        Args:
+            reload (bool): If True, reload the command data from the server to verify the current status.
         """
         if self.command_id is None:
             raise ExceptionTuoniDeleted("")
@@ -71,10 +78,13 @@ class TuoniCommand:
 
     def get_result(self, reload = True):
         """
-        Get command result object
+        Retrieve the result object of the command.
 
-        Attributes:
-            reload (bool): Should the data be reloaded from server
+        Args:
+            reload (bool): If True, reload the command result data from the server.
+
+        Returns:
+            TuoniResult: The result object containing the data from the command execution.
         """
         if self.command_id is None:
             raise ExceptionTuoniDeleted("")
@@ -85,11 +95,14 @@ class TuoniCommand:
 
     def wait_result(self, interval = 1, maxWait = 0):
         """
-        Wait for command result object
+        Wait for the command result object to be available.
 
-        Attributes:
-            interval (int): How often to reload data from server, in seconds
-            maxWait (int): Maximum seconds to wait
+        Args:
+            interval (int): The interval, in seconds, to reload the data from the server.
+            maxWait (int): The maximum time to wait, in seconds, before giving up. A value of 0 means wait indefinitely.
+
+        Returns:
+            TuoniResult: The result object containing the data from the command execution, if available within the specified time.
         """
         self.reload()
         while self.result is None:

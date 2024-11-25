@@ -3,18 +3,25 @@ from tuoni.TuoniListener import *
 
 class TuoniListenerPlugin:
     """
-    Class providing data and functionality of the listener plugin
+    A class that provides data and functionality for a listener plugin.
 
     Attributes:
-        name (str): Name of the listener plugin
-        vendor (str): Vendor of the listener plugin
-        description (str): Listener plugin description
-        plugin_id (str): Listener plugin id
-        conf_schema (dict): Configuration schema
-        conf_examples (dict): Configuration examples
+        name (str): The name of the listener plugin.
+        vendor (str): The vendor of the listener plugin.
+        description (str): A description of the listener plugin.
+        plugin_id (str): The unique identifier of the listener plugin.
+        conf_schema (dict): The configuration schema for the listener plugin.
+        conf_examples (dict): Examples of valid configurations for the listener plugin.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the listener plugin class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self.name = conf["info"]["name"]
         self.vendor = conf["info"]["vendor"]
         self.description = conf["info"]["description"]
@@ -30,14 +37,14 @@ class TuoniListenerPlugin:
 
     def create(self, new_listener_conf, new_listener_name=None):
         """
-        Create new listener
+        Create a new listener.
 
-        Attributes:
-            new_listener_conf (dict): Listener configuration
-            new_listener_name (bool): Listener name
+        Args:
+            new_listener_conf (dict): The configuration for the new listener.
+            new_listener_name (str): The name to assign to the new listener.
 
         Returns:
-            TuoniListener: Object referencing the created listener
+            TuoniListener: An object representing the newly created listener.
         """
         json_data = {
             "plugin": self.plugin_id,
@@ -51,10 +58,10 @@ class TuoniListenerPlugin:
 
     def get_default_conf(self):    
         """
-        Default configuration
-        
+        Retrieve the default configuration for the listener plugin.
+
         Returns:
-            dict: Default configuration or empty dict
+            dict: The default configuration settings, or an empty dictionary if none are defined.
         """
         if "default" in self.conf_examples:
             return self.conf_examples["default"]
@@ -62,10 +69,10 @@ class TuoniListenerPlugin:
 
     def get_minimal_conf(self):
         """
-        Minimal configuration
-        
+        Retrieve the minimal configuration for the listener plugin.
+
         Returns:
-            dict: Minimal configuration or empty dict
+            dict: The minimal configuration settings, or an empty dictionary if none are defined.
         """
         return self.get_default_conf()
 

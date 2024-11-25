@@ -5,19 +5,27 @@ from tuoni.TuoniDefaultCommands import *
 
 class TuoniAgent:
     """
-    Class providing data and functionality of the connected agent
+    A class that encapsulates the data and functionality of a connected agent.
 
     Attributes:
-        guid (Guid): Agent GUID
-        first_registration_time (datetime): First time the agent connected
-        last_callback_time (datetime): Last time the agent connected
-        metadata (cict): Agent metadata
-        active (bool): Is agent active
-        recentListeners (list): Over what listener the connection works
-        availableCommands (dict): Available commands
+        guid (GUID): A unique identifier (GUID) assigned to the agent.
+        first_registration_time (str): The time, in string format, when the agent first connected.
+        last_callback_time (str): The time, in string format, of the agent's most recent connection.
+        metadata (dict): A dictionary containing metadata about the agent.
+        active (bool): A boolean flag indicating whether the agent is currently active.
+        recentListeners (list): A list of listeners that the agent uses to maintain its connection.
+        availableCommands (dict): A dictionary of commands that the agent is capable of executing.
     """
 
     def __init__(self, conf, c2):
+        """
+        Constructor.
+
+        Attributes:
+            conf (dict): Data from server.
+            c2 (TuoniC2): Related server object.
+        
+        """
         self.c2 = c2
         self._load_conf(conf)
 
@@ -32,16 +40,16 @@ class TuoniAgent:
 
     def send_command(self, command_type, command_conf=None, execution_conf = None, files = None):
         """
-        Send command to agent
+        Send command to agent.
 
         Args:
             command_type (str | TuoniAlias | TuoniDefaultCommand): What command to send.
-            command_conf (dict): Command configuration
-            execution_conf (dict): Execution configuration
-            files (dict): Files to send with command
+            command_conf (dict): Command configuration.
+            execution_conf (dict): Execution configuration.
+            files (dict): Files to send with command.
 
         Returns:
-            TuoniCommand: Object referencing the created command
+            TuoniCommand: An object representing the created command.
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
@@ -65,10 +73,10 @@ class TuoniAgent:
 
     def get_commands(self):
         """
-        Get all agent commands
+        Retrieves a list of all commands associated with the agent.
 
         Returns:
-            list[TuoniCommand]: List of agent commands
+            list[TuoniCommand]: List of commands sent to the agent.
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
@@ -82,7 +90,7 @@ class TuoniAgent:
 
     def delete(self):
         """
-        Deletes agent
+        Deletes agent.
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")

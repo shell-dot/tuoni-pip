@@ -4,20 +4,27 @@ from tuoni.TuoniExceptions import *
 
 class TuoniAlias:
     """
-    Class providing data and functionality of the connected alias
+    A class that provides data and functionality for a command alias.
 
     Attributes:
-        alias_id (Guid): Alias GUID
-        name (str): Name of the alias
-        qualifiedName (str): Qualified name
-        fullyQualifiedName (str): Full qualified name
-        description (str): Description of the alias
-        fixedConfiguration (dict): Fixed configuration of the base command
-        pluginVersion (str): Version of the plugin
-        baseTemplate (dict): Base template
+        alias_id (GUID): The unique identifier (GUID) for the alias.
+        name (str): The name of the alias.
+        qualifiedName (str): The qualified name of the alias.
+        fullyQualifiedName (str): The fully qualified name of the alias.
+        description (str): A description of the alias.
+        fixedConfiguration (dict): The fixed configuration settings for the base command.
+        pluginVersion (str): The version of the associated plugin.
+        baseTemplate (dict): The base template used for the alias.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the alias class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self._load_conf(conf)
         self.c2 = c2
 
@@ -33,7 +40,7 @@ class TuoniAlias:
 
     def reload(self):
         """
-        Reload data from C2
+        Reload the alias data from the C2 server.
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")
@@ -42,7 +49,7 @@ class TuoniAlias:
 
     def delete(self):
         """
-        Deletes alias
+        Delete the alias.
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")

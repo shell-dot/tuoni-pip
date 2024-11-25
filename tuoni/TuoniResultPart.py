@@ -4,17 +4,24 @@ from tuoni.TuoniExceptions import *
 
 class TuoniResultPart:
     """
-    Class providing data and functionality of the command result part
+    A class that provides data and functionality for a part of a command result.
 
     Attributes:
-        type (str): Type of the result part
-        name (str): Name of the result part
-        value (str): Value of the result part
-        filename (str): Filename of the file in result part
-        uri (str): File URI of the file in result part
+        type (str): The type of the result part.
+        name (str): The name of the result part.
+        value (str): The value associated with the result part.
+        filename (str): The filename of any file included in the result part.
+        uri (str): The URI for accessing the file in the result part.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the result part class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self._load_conf(conf)
         self.c2 = c2
 
@@ -34,10 +41,10 @@ class TuoniResultPart:
 
     def get_as_text(self):
         """
-        Get result part value as a text
-        
+        Retrieve the value of the result part as text.
+
         Returns:
-            str: Result part as text
+            str: The value of the result part as a string.
         """
         if self.type == "text":
             return self.value
@@ -47,10 +54,10 @@ class TuoniResultPart:
 
     def get_as_file(self, filename):
         """
-        Get result part value as a file
-        
-        Returns:
-            str: Result part as file
+        Retrieve the value of the result part as a file and save it to the specified location.
+
+        Args:
+            filename (str): The path where the file should be saved.
         """
         if self.type == "file":
             self.c2.request_get_file(self.uri, filename)
@@ -58,10 +65,10 @@ class TuoniResultPart:
 
     def get_as_json(self):
         """
-        Get result part value as a json
-        
+        Retrieve the value of the result part as JSON and convert it to a dictionary.
+
         Returns:
-            str: Result part as json
+            dict: The result part as a dictionary.
         """
         if self.type == "text":
             return json.loads(self.value)

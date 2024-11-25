@@ -16,7 +16,7 @@ from tuoni.TuoniUser import *
 
 class TuoniC2:
     """
-    Tuoni main class for connecting and controlling Tuoni server
+    The primary class for establishing connections to and managing interactions with the Tuoni server. It provides functionality for controlling server operations and facilitating communication.
     """
     def __init__(self):
         self._token: str = None
@@ -25,12 +25,12 @@ class TuoniC2:
 
     def login(self, url: str, username: str, password: str):
         """
-        Login to tuoni server
+        Login to the Tuoni server.
 
         Args:
-            url (str): What URL to connect
-            username (str): Username to use
-            password (str): Password to use
+            url (str): The URL of the Tuoni server to connect to.
+            username (str): The username for authentication.
+            password (str): The password for authentication.
         """
         headers = {
             "Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('utf-8')
@@ -65,14 +65,14 @@ class TuoniC2:
 
     def request_get(self, uri: str, result_as_json: bool = True):
         """
-        GET request to tuoni server
+        Send a GET request to the Tuoni server.
 
         Args:
-            uri (str): URI to use
-            result_as_json (bool): Is result from server handled as json and converted to dict
+            uri (str): The URI endpoint to send the request to.
+            result_as_json (bool): If True, the server's response is treated as JSON and converted to a dictionary.
 
         Returns:
-            str | dict: Result of the request
+            str | dict: The server's response, either as a raw string or a dictionary if `result_as_json` is True.
         """
         response = self._make_request("GET", uri)
         if response.text == "":
@@ -81,11 +81,11 @@ class TuoniC2:
 
     def request_get_file(self, uri: str, file_name: str):
         """
-        GET request to tuoni server, result written to filesystem
+        Send a GET request to the Tuoni server and save the result to the filesystem.
 
         Args:
-            uri (str): URI to use
-            file_name (str): Filename to create
+            uri (str): The URI endpoint to send the request to.
+            file_name (str): The name of the file where the response will be saved.
         """
         response = self._make_request("GET", uri, stream=True)
         with open(file_name, 'wb') as out_file:
@@ -93,15 +93,15 @@ class TuoniC2:
 
     def request_post(self, uri: str, json_data: dict = None, files: dict = None):
         """
-        POST request to tuoni server
-
+        Send a POST request to the Tuoni server.
+        
         Args:
-            uri (str): URI to use
-            json_data (dict): JSON data to send in POST content
-            files (dict): Files to send in POST
-
+            uri (str): The URI endpoint to send the request to.
+            json_data (dict): A dictionary containing the JSON payload to include in the POST request.
+            files (dict): A dictionary of files to upload with the POST request.
+        
         Returns:
-            dict: Result of the request
+            dict: The server's response as a dictionary.
         """
         if files is None:
             response = self._make_request("POST", uri, json=json_data)
@@ -116,75 +116,75 @@ class TuoniC2:
 
     def request_put(self, uri: str, json_data: dict = None):
         """
-        PUT request to tuoni server
-
+        Send a PUT request to the Tuoni server.
+        
         Args:
-            uri (str): URI to use
-            json_data (dict): JSON data to send in PUT content
-
+            uri (str): The URI endpoint to send the request to.
+            json_data (dict): A dictionary containing the JSON payload to include in the PUT request.
+        
         Returns:
-            dict: Result of the request
+            dict: The server's response as a dictionary.
         """
         response = self._make_request("PUT", uri, json=json_data)
         return json.loads(response.text) if response.text else None
 
     def request_delete(self, uri: str, json_data: dict = None):
         """
-        DELETE request to tuoni server
+        Send a DELETE request to the Tuoni server.
 
         Args:
-            uri (str): URI to use
-            json_data (dict): JSON data to send in DELETE content
+            uri (str): The URI endpoint to send the request to.
+            json_data (dict): A dictionary containing the JSON payload to include in the DELETE request.
 
         Returns:
-            dict: Result of the request
+            dict: The server's response as a dictionary.
         """
         response = self._make_request("DELETE", uri, json=json_data)
         return json.loads(response.text) if response.text else None
 
     def load_listener_plugins(self):
         """
-        Get list of listener plugins
-
+        Retrieve a list of listener plugins.
+        
         Returns:
-            list[TuoniListenerPlugin]: List of plugins
+            list[TuoniListenerPlugin]: A list of available listener plugins.
         """
         plugins_data = self.request_get("/api/v1/plugins/listeners")
         return {plugin_data["identifier"]["id"]: TuoniListenerPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
 
     def load_listeners(self):
         """
-        Get list of listeners
-
+        Retrieve a list of listeners.
+        
         Returns:
-            list[TuoniListener]: List of listeners
+            list[TuoniListener]: A list of active listeners.
         """
         listeners_data = self.request_get("/api/v1/listeners")
         return [TuoniListener(listener_data, self) for listener_data in listeners_data.values()]
 
     def load_payload_plugins(self):
         """
-        Get list of payload plugins
-
+        Retrieve a list of payload plugins.
+        
         Returns:
-            list[TuoniPayloadPlugin]: List of plugins
+            list[TuoniPayloadPlugin]: A list of available payload plugins.
         """
         plugins_data = self.request_get("/api/v1/plugins/payloads")
         return {plugin_data["identifier"]["id"]: TuoniPayloadPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
 
     def create_payload(self, payload_template: str, payload_listener: int, payload_conf: dict, encrypted: bool = True, payload_name: str = None):
         """
-        Create new payload
+        Create a new payload.
 
         Args:
-            payload_template (str): URI to use
-            payload_listener (int): Listener id
-            payload_conf (dict): Payload configuration
-            encrypted (bool): Should traffic with this payload be encrypted
-            payload_name (dict): Payload name
+            payload_template (str): The payload template to use.
+            payload_listener (int): The ID of the listener associated with this payload.
+            payload_conf (dict): A dictionary containing the payload's configuration.
+            encrypted (bool): Specifies whether traffic for this payload should be encrypted.
+            payload_name (str): The name to assign to the payload.
 
         Returns:
-            id: Payload id
+            id: The unique ID of the created payload.
         """
         json_data = {
             "payloadTemplateId": payload_template,
@@ -198,34 +198,34 @@ class TuoniC2:
 
     def download_payload(self, payload_id: int, file_name: str):
         """
-        Download payload
+        Download a payload.
 
         Args:
-            payload_id (int): Payload ID
-            file_name (str): What file to write into
+            payload_id (int): The unique ID of the payload to download.
+            file_name (str): The name of the file to save the downloaded payload.
         """
         self.request_get_file(f"/api/v1/payloads/{payload_id}/download", file_name)
 
     def load_agents(self):
         """
-        Get agents list
+        Retrieve a list of agents.
 
         Returns:
-            list[TuoniAgent]: List of agents
+            list[TuoniAgent]: A list of agents.
         """
         agents_data = self.request_get("/api/v1/agents/active")
         return [TuoniAgent(agent_data, self) for agent_data in agents_data]
 
     def wait_new_agent(self, interval: int = 1, max_wait: int = 0):
         """
-        Wait for new agent to connect
+        Wait for a new agent to connect.
 
         Args:
-            interval (int): How often to check for new connections in second
-            max_wait (int): Maximum time to wait - 0 means infinite
+            interval (int): The interval, in seconds, to check for new connections.
+            max_wait (int): The maximum time to wait, in seconds. A value of 0 means to wait indefinitely.
 
         Returns:
-            TuoniAgent: Agent that connected
+            TuoniAgent: The newly connected agent.
         """
         original_agents = {agent_data["guid"] for agent_data in self.request_get("/api/v1/agents/active")}
         while True:
@@ -241,11 +241,11 @@ class TuoniC2:
 
     def on_new_agent(self, function, interval: int = 1):
         """
-        Callback when new agent connects
+        Set a callback function to be triggered when a new agent connects.
 
         Args:
-            function (func): What function to call
-            interval (int): How often to check
+            function (func): The function to execute when a new agent connects.
+            interval (int): The interval, in seconds, to check for new connections.
         """
         monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval), daemon=True)
         monitor_thread.start()
@@ -264,27 +264,27 @@ class TuoniC2:
 
     def load_aliases(self):
         """
-        Get aliases list
-
+        Retrieve a list of aliases.
+        
         Returns:
-            list[TuoniAlias]: List of aliases
+            list[TuoniAlias]: A list of aliases.
         """
         all_aliases = self.request_get("/api/v1/command-alias")
         return [TuoniAlias(alias_data, self) for alias_data in all_aliases]
         
     def add_alias(self, name, description, command_type, command_conf=None, files = None):
         """
-        Add alias
+        Add a new alias.
 
         Args:
-            name (str): Name of the alias being created
-            description (str): Alias description
-            command_type (str | TuoniDefaultCommand): Base command to use 
-            command_conf (dict): Set configuration for alias
-            files (dict): Set file parameters for alias
+            name (str): The name of the alias to create.
+            description (str): A description of the alias.
+            command_type (str | TuoniDefaultCommand): The base command to associate with the alias.
+            command_conf (dict): Configuration settings for the alias.
+            files (dict): File parameters associated with the alias.
 
         Returns:
-            TuoniAlias: Alias that was created
+            TuoniAlias: The newly created alias.
         """
         if isinstance(command_type, TuoniDefaultCommand):
             command_conf = command_type.command_conf
@@ -304,59 +304,59 @@ class TuoniC2:
 
     def load_hosted(self):
         """
-        Get hosted file list
+        Retrieve a list of hosted files.
 
         Returns:
-            dict: Hosted files
+            dict: A dictionary containing the details of hosted files.
         """
         return self.request_get("/api/v1/files")
         
     def add_hosted(self, filename, file_content):
         """
-        Add hosted file
+        Add a hosted file.
 
         Args:
-            filename (str): Filename 
-            file_content (bytes): File content
+            filename (str): The name of the file to host.
+            file_content (bytes): The content of the file in bytes.
 
         Returns:
-            str: API URI for the uploaded file
+            str: The API URI for the uploaded file.
         """
         return self.request_post("/api/v1/files", files = {"file": [filename, file_content]})
         
     def delete_hosted(self, hosted):
         """
-        Delete hosted file
+        Delete a hosted file.
 
         Returns:
-            dict: Hosted files
+            dict: The updated list of hosted files after deletion.
         """
         full_uri = hosted
         if "/api/v1/files/" not in hosted:
             hosted = "/api/v1/files/" + hosted
-        self.request_delete(hosted)
+        return self.request_delete(hosted)
 
     def load_users(self):
         """
-        Get users list
+        Retrieve a list of users.
 
         Returns:
-            list[TuoniUser]: List of users
+            list[TuoniUser]: A list of users.
         """
         all_users = self.request_get("/api/v1/users")
         return [TuoniUser(user_data, self) for user_data in all_users]
         
     def add_user(self, username, password, authorities):
         """
-        Add user
+        Add a new user.
 
         Args:
-            username (str): Username to create 
-            password (str): Initial password 
-            authorities (list[str]): List of authorities
+            username (str): The username for the new user.
+            password (str): The initial password for the user.
+            authorities (list[str]): A list of authorities or roles assigned to the user.
 
         Returns:
-            TuoniUser: User that was created
+            TuoniUser: The newly created user.
         """
         json_data = {
             "username": username,
@@ -368,7 +368,8 @@ class TuoniC2:
 
     def let_it_run(self):
         """
-        If there are any callback functions initialized, then wait forever or until monitoring threads end
+        Block execution and wait indefinitely if any callback functions are initialized, 
+        or until all monitoring threads have completed.
         """
         for monitoring_thread in self._monitoring_threads:
             monitoring_thread.join()

@@ -3,16 +3,23 @@ from tuoni.TuoniResultPart import *
 
 class TuoniResult:
     """
-    Class providing data of the command result
+    A class that provides data for a command result.
 
     Attributes:
-        status (str): Status of the result
-        error_message (str): Error message of the result
-        received (datetime): When was result received
-        parts (list[TuoniResultPart]): List of result parts
+        status (str): The status of the result.
+        error_message (str): The error message, if any, for the result.
+        received (str): The time, in string format, indicating when the result was received.
+        parts (list[TuoniResultPart]): A list of parts that make up the result.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the result class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self.c2 = c2
         self._load_conf(conf)
 

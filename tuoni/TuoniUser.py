@@ -4,14 +4,21 @@ from tuoni.TuoniExceptions import *
 
 class TuoniUser:
     """
-    Class providing data and functionality of the users
+    A class that provides data and functionality for users.
 
     Attributes:
-        username (str): Username
-        enabled (bool): Is user enabled
-        authorities (list[str]): List of authorities given to the user
+        username (str): The username of the user.
+        enabled (bool): Indicates whether the user is enabled.
+        authorities (list[str]): A list of authorities or roles assigned to the user.
     """
     def __init__(self, conf, c2):
+        """
+        Constructor for the result part class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self._load_conf(conf)
         self.c2 = c2
 
@@ -22,7 +29,7 @@ class TuoniUser:
 
     def reload(self):
         """
-        Reload data from server
+        Reload the user data from the C2 server.
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")
@@ -31,7 +38,7 @@ class TuoniUser:
 
     def disable(self):
         """
-        Disable user
+        Disable the user.
         """
         data = {"enabled": False, "authorities": self.authorities}
         data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
@@ -39,7 +46,7 @@ class TuoniUser:
 
     def enable(self):
         """
-        Enable user
+        Enable the user.
         """
         data = {"enabled": True, "authorities": self.authorities}
         data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
@@ -47,7 +54,7 @@ class TuoniUser:
 
     def set_authorities(self, authorities):
         """
-        Change user authorities
+        Change the authorities assigned to the user.
         """
         data = {"authorities": authorities, "enabled": self.enabled}
         data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
@@ -55,7 +62,7 @@ class TuoniUser:
 
     def set_password(self, new_password):
         """
-        Set user password
+        Set a new password for the user.
         """
         data = {"newPassword": new_password}
         data = self.c2.request_put("/api/v1/users/%s/password" % self.username, data)

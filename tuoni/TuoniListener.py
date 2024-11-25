@@ -2,18 +2,25 @@ from tuoni.TuoniExceptions import *
 
 class TuoniListener:
     """
-    Class providing data and functionality of the created listener
+    A class that provides data and functionality for a created listener.
 
     Attributes:
-        listener_id (int): Listener id
-        name (str): Name of the listener
-        info (str): Information of the listener
-        status (str): Status of the listener
-        plugin (str): Listener plugin of the listener
-        configuration (dict): Listener configuration
+        listener_id (int): The unique identifier of the listener.
+        name (str): The name of the listener.
+        info (str): Information about the listener.
+        status (str): The current status of the listener.
+        plugin (str): The plugin associated with the listener.
+        configuration (dict): The configuration settings for the listener.
     """
     
     def __init__(self, conf, c2):
+        """
+        Constructor for the listener class.
+
+        Args:
+            conf (dict): Data from the server.
+            c2 (TuoniC2): The related server object that manages communication.
+        """
         self._load_conf(conf)
         self.c2 = c2
 
@@ -27,7 +34,7 @@ class TuoniListener:
 
     def stop(self):
         """
-        Stop listener
+        Stop the listener.
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
@@ -36,16 +43,16 @@ class TuoniListener:
 
     def start(self):
         """
-        Start listener
+        Start the listener.
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_put("/api/v1/listeners/%d/stop" % self.listener_id)
+        data = self.c2.request_put("/api/v1/listeners/%d/start" % self.listener_id)
         self._load_conf(data)
 
     def delete(self):
         """
-        Delete listener
+        Delete the listener.
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
