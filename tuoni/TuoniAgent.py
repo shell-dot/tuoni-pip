@@ -50,6 +50,13 @@ class TuoniAgent:
 
         Returns:
             TuoniCommand: An object representing the created command.
+
+        Examples:
+            >>> command1 = agent.send_command(TuoniCommandLs(".\subdir", 2))
+            >>> command2 = agent.send_command(TuoniCommandProcinfo(), execution_conf ={"execType": "NEW"})
+            >>> command3 = agent.send_command(TuoniCommandProcinfo(), execution_conf = {"execType": "EXISTING", "pid": 1234})
+            >>> command4 = agent.send_command("ls", {"dir": ".\subdir", "depth": 2})
+            >>> command5 = agent.send_command(alias_object, {"conf_value_name": "conf_value"})
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")

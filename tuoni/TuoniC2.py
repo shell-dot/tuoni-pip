@@ -31,6 +31,10 @@ class TuoniC2:
             url (str): The URL of the Tuoni server to connect to.
             username (str): The username for authentication.
             password (str): The password for authentication.
+
+        Examples:
+            >>> tuoni_server = TuoniC2()
+            >>> tuoni_server.login("https://localhost:8443", "my_user", "S3cr37")
         """
         headers = {
             "Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('utf-8')
@@ -102,6 +106,10 @@ class TuoniC2:
         
         Returns:
             dict: The server's response as a dictionary.
+
+        Examples:
+            >>> tuoni = TuoniC2()
+            >>> tuoni_server.request_post("/api/v1/command-alias", {"name": "bofX","description": "Example","baseTemplate": "bof","fixedConfiguration": {"method": "go"}},{"bofFile" : ["some_bof.o", open("some_bof", "rb").read()]})
         """
         if files is None:
             response = self._make_request("POST", uri, json=json_data)
@@ -148,6 +156,13 @@ class TuoniC2:
         
         Returns:
             list[TuoniListenerPlugin]: A list of available listener plugins.
+
+        Examples:
+            >>> http_listener_plugin = tuoni_server.load_listener_plugins()["shelldot.listener.agent-reverse-http"]
+            >>> conf = http_listener_plugin.conf_examples["default"]
+            >>> conf["sleep"] = 2
+            >>> conf["instantResponses"] = True
+            >>> listener = http_listener_plugin.create(conf)
         """
         plugins_data = self.request_get("/api/v1/plugins/listeners")
         return {plugin_data["identifier"]["id"]: TuoniListenerPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
@@ -185,6 +200,9 @@ class TuoniC2:
 
         Returns:
             id: The unique ID of the created payload.
+
+        Examples:
+            >>> payload_id = tuoni_server.create_payload("shelldot.payload.windows-x64",  listener_id, {"type": "executable"})
         """
         json_data = {
             "payloadTemplateId": payload_template,
@@ -246,6 +264,12 @@ class TuoniC2:
         Args:
             function (func): The function to execute when a new agent connects.
             interval (int): The interval, in seconds, to check for new connections.
+
+        Examples:
+            >>> def new_agent_callback(agent):
+            >>>     print(f"We got outselves a new agent {agent.guid} from {agent.metadata['hostname']}")
+            >>> 
+            >>> tuoni_server.on_new_agent(new_agent_callback)
         """
         monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval), daemon=True)
         monitor_thread.start()
@@ -272,7 +296,7 @@ class TuoniC2:
         all_aliases = self.request_get("/api/v1/command-alias")
         return [TuoniAlias(alias_data, self) for alias_data in all_aliases]
         
-    def add_alias(self, name, description, command_type, command_conf=None, files = None):
+    def add_alias(self, name, description, command_type, command_conf={}, files = None):
         """
         Add a new alias.
 
@@ -285,6 +309,13 @@ class TuoniC2:
 
         Returns:
             TuoniAlias: The newly created alias.
+
+        Examples:
+            >>> alias1 = tuoni_server.add_alias("ls1", "Alias made with python lib based on 'ls' default command class", TuoniCommandLs, {"depth": 1})
+            >>> alias2 = tuoni_server.add_alias("ls2", "Alias made with python lib based on command string name", "ls", {"depth": 2})
+            >>> alias3 = tuoni_server.add_alias("easm", "Alias for execute assembly default command class", TuoniCommandexecuteAssembly, {}, files={"executable": ["dotnet.exe",open("dotnet.exe", "rb").read()]})
+            >>> alias4 = tuoni_server.add_alias("bof1", "Alias for bof based on command string name", "bof", files={"bofFile": ["bof.o",open("bof.o", "rb").read()]})
+            >>> alias5 = tuoni_server.add_alias("bof2", "Alias for bof based on command ID", "2ac58f33-d35e-4afd-a1ac-00e460ceb9f4", files={"bofFile": ["bof.o",open("bof.o", "rb").read()]})
         """
         if isinstance(command_type, TuoniDefaultCommand):
             command_conf = command_type.command_conf
@@ -321,6 +352,9 @@ class TuoniC2:
 
         Returns:
             str: The API URI for the uploaded file.
+
+        Examples:
+            >>> tuoni_server.add_hosted("/hosted/file/here.txt", b"HELLO WORLD")
         """
         return self.request_post("/api/v1/files", files = {"file": [filename, file_content]})
         
@@ -357,6 +391,9 @@ class TuoniC2:
 
         Returns:
             TuoniUser: The newly created user.
+
+        Examples:
+            >>> user = tuoni_server.add_user("cool_new_user", "cool_new_password", ["MANAGE_LISTENERS","MANAGE_USERS","SEND_COMMANDS","MANAGE_PAYLOADS","MODIFY_FILES","VIEW_RESOURCES","MANAGE_AGENTS"])
         """
         json_data = {
             "username": username,
