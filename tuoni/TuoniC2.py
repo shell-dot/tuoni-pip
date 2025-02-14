@@ -1,3 +1,4 @@
+import os
 import time
 import requests
 import json
@@ -12,6 +13,10 @@ from tuoni.TuoniAgent import *
 from tuoni.TuoniPayloadPlugin import *
 from tuoni.TuoniAlias import *
 from tuoni.TuoniUser import *
+from tuoni.TuoniFile import *
+from tuoni.TuoniDataHost import *
+from tuoni.TuoniDataService import *
+from tuoni.TuoniDataCredential import *
 
 
 class TuoniC2:
@@ -109,7 +114,16 @@ class TuoniC2:
 
         Examples:
             >>> tuoni = TuoniC2()
-            >>> tuoni_server.request_post("/api/v1/command-alias", {"name": "bofX","description": "Example","baseTemplate": "bof","fixedConfiguration": {"method": "go"}},{"bofFile" : ["some_bof.o", open("some_bof", "rb").read()]})
+            >>> tuoni_server.request_post(
+            >>>     "/api/v1/command-alias", 
+            >>>     {
+            >>>         "name": "bofX",
+            >>>         "description": "Example",
+            >>>         "baseTemplate": "bof",
+            >>>         "fixedConfiguration": {"method": "go"}
+            >>>     },
+            >>>     {"bofFile" : ["some_bof.o", open("some_bof", "rb").read()]}
+            >>> )
         """
         if files is None:
             response = self._make_request("POST", uri, json=json_data)
@@ -120,6 +134,29 @@ class TuoniC2:
             for var_name, file_info in files.items():
                 all_data[var_name] = (file_info[0], file_info[1], 'application/octet-stream')
             response = self._make_request("POST", uri, files=all_data)
+        return json.loads(response.text) if response.text else None
+    
+    def request_patch(self, uri: str, json_data: dict = None, files: dict = None):
+        """
+        Send a PATCH request to the Tuoni server.
+        
+        Args:
+            uri (str): The URI endpoint to send the request to.
+            json_data (dict): A dictionary containing the JSON payload to include in the POST request.
+            files (dict): A dictionary of files to upload with the POST request.
+        
+        Returns:
+            dict: The server's response as a dictionary.
+        """
+        if files is None:
+            response = self._make_request("PATCH", uri, json=json_data)
+        else:
+            all_data = {}
+            if json_data is not None:
+                all_data["requestBody"] = (None, json.dumps(json_data), 'application/json')
+            for var_name, file_info in files.items():
+                all_data[var_name] = (file_info[0], file_info[1], 'application/octet-stream')
+            response = self._make_request("PATCH", uri, files=all_data)
         return json.loads(response.text) if response.text else None
 
     def request_put(self, uri: str, json_data: dict = None):
@@ -158,7 +195,9 @@ class TuoniC2:
             list[TuoniListenerPlugin]: A list of available listener plugins.
 
         Examples:
-            >>> http_listener_plugin = tuoni_server.load_listener_plugins()["shelldot.listener.agent-reverse-http"]
+            >>> http_listener_plugin = tuoni_server.load_listener_plugins()[
+            >>>     "shelldot.listener.agent-reverse-http"
+            >>> ]
             >>> conf = http_listener_plugin.conf_examples["default"]
             >>> conf["sleep"] = 2
             >>> conf["instantResponses"] = True
@@ -202,7 +241,11 @@ class TuoniC2:
             id: The unique ID of the created payload.
 
         Examples:
-            >>> payload_id = tuoni_server.create_payload("shelldot.payload.windows-x64",  listener_id, {"type": "executable"})
+            >>> payload_id = tuoni_server.create_payload(
+            >>>     "shelldot.payload.windows-x64",  
+            >>>     listener_id, 
+            >>>     {"type": "executable"}
+            >>> )
         """
         json_data = {
             "payloadTemplateId": payload_template,
@@ -267,7 +310,9 @@ class TuoniC2:
 
         Examples:
             >>> def new_agent_callback(agent):
-            >>>     print(f"We got outselves a new agent {agent.guid} from {agent.metadata['hostname']}")
+            >>>     print(
+            >>>         f"We got outselves a new agent {agent.guid} from {agent.metadata['hostname']}"
+            >>>     )
             >>> 
             >>> tuoni_server.on_new_agent(new_agent_callback)
         """
@@ -311,11 +356,47 @@ class TuoniC2:
             TuoniAlias: The newly created alias.
 
         Examples:
-            >>> alias1 = tuoni_server.add_alias("ls1", "Alias made with python lib based on 'ls' default command class", TuoniCommandLs, {"depth": 1})
-            >>> alias2 = tuoni_server.add_alias("ls2", "Alias made with python lib based on command string name", "ls", {"depth": 2})
-            >>> alias3 = tuoni_server.add_alias("easm", "Alias for execute assembly default command class", TuoniCommandexecuteAssembly, {}, files={"executable": ["dotnet.exe",open("dotnet.exe", "rb").read()]})
-            >>> alias4 = tuoni_server.add_alias("bof1", "Alias for bof based on command string name", "bof", files={"bofFile": ["bof.o",open("bof.o", "rb").read()]})
-            >>> alias5 = tuoni_server.add_alias("bof2", "Alias for bof based on command ID", "2ac58f33-d35e-4afd-a1ac-00e460ceb9f4", files={"bofFile": ["bof.o",open("bof.o", "rb").read()]})
+            >>> alias1 = tuoni_server.add_alias(
+            >>>     "ls1", 
+            >>>     "Alias made with python lib based on 'ls' default command class", 
+            >>>     TuoniCommandLs, 
+            >>>     {"depth": 1}
+            >>> )
+
+            >>> alias2 = tuoni_server.add_alias(
+            >>>     "ls2", 
+            >>>     "Alias made with python lib based on command string name", 
+            >>>     "ls", 
+            >>>     {"depth": 2}
+            >>> )
+
+            >>> alias3 = tuoni_server.add_alias(
+            >>>     "easm", 
+            >>>     "Alias for execute assembly default command class", 
+            >>>     TuoniCommandexecuteAssembly, 
+            >>>     {}, 
+            >>>     files = {
+            >>>         "executable": ["dotnet.exe",open("dotnet.exe", "rb").read()]
+            >>>     }
+            >>> )
+
+            >>> alias4 = tuoni_server.add_alias(
+            >>>     "bof1", 
+            >>>     "Alias for bof based on command string name", 
+            >>>     "bof", 
+            >>>     files = {
+            >>>         "bofFile": ["bof.o",open("bof.o", "rb").read()]
+            >>>     }
+            >>> )
+
+            >>> alias5 = tuoni_server.add_alias(
+            >>>     "bof2", 
+            >>>     "Alias for bof based on command ID", 
+            >>>     "2ac58f33-d35e-4afd-a1ac-00e460ceb9f4", 
+            >>>     files = {
+            >>>         "bofFile": ["bof.o",open("bof.o", "rb").read()]
+            >>>     }
+            >>> )
         """
         if isinstance(command_type, TuoniDefaultCommand):
             command_conf = command_type.command_conf
@@ -338,11 +419,12 @@ class TuoniC2:
         Retrieve a list of hosted files.
 
         Returns:
-            dict: A dictionary containing the details of hosted files.
+            list[TuoniFile]: A list of objects containing the details of hosted files.
         """
-        return self.request_get("/api/v1/files")
+        all_files = self.request_get("/api/v1/files")
+        return [TuoniFile(file_data, self) for file_data in all_files]
         
-    def add_hosted(self, filename, file_content):
+    def add_hosted(self, filename, file_content, original_filename = None):
         """
         Add a hosted file.
 
@@ -356,19 +438,21 @@ class TuoniC2:
         Examples:
             >>> tuoni_server.add_hosted("/hosted/file/here.txt", b"HELLO WORLD")
         """
-        return self.request_post("/api/v1/files", files = {"file": [filename, file_content]})
+        if original_filename is None:
+            original_filename = os.path.basename(filename)
+        return self.request_post("/api/v1/files", files = {filename: [original_filename, file_content]})
         
     def delete_hosted(self, hosted):
         """
         Delete a hosted file.
 
         Returns:
-            dict: The updated list of hosted files after deletion.
+            None
         """
-        full_uri = hosted
-        if "/api/v1/files/" not in hosted:
-            hosted = "/api/v1/files/" + hosted
-        return self.request_delete(hosted)
+        if isinstance(hosted, TuoniFile):
+            self.request_delete("/api/v1/file/" + hosted.fileId)
+        else:
+            self.request_delete("/api/v1/file/" + hosted)
 
     def load_users(self):
         """
@@ -393,7 +477,19 @@ class TuoniC2:
             TuoniUser: The newly created user.
 
         Examples:
-            >>> user = tuoni_server.add_user("cool_new_user", "cool_new_password", ["MANAGE_LISTENERS","MANAGE_USERS","SEND_COMMANDS","MANAGE_PAYLOADS","MODIFY_FILES","VIEW_RESOURCES","MANAGE_AGENTS"])
+            >>> user = tuoni_server.add_user(
+            >>>     "cool_new_user", 
+            >>>     "cool_new_password", 
+            >>>     [
+            >>>         "MANAGE_LISTENERS",
+            >>>         "MANAGE_USERS",
+            >>>         "SEND_COMMANDS",
+            >>>         "MANAGE_PAYLOADS",
+            >>>         "MODIFY_FILES",
+            >>>         "VIEW_RESOURCES",
+            >>>         "MANAGE_AGENTS"
+            >>>     ]
+            >>> )
         """
         json_data = {
             "username": username,
@@ -402,6 +498,141 @@ class TuoniC2:
         }
         user_data = self.request_post("/api/v1/users", json_data, None)
         return TuoniUser(user_data, self)
+    
+    def load_datamodel_hosts(self, page = 0, pageSize = 256, filter = None):
+        """
+        Retrieve a list of hosts.
+
+        Returns:
+            list[TuoniDataHost]: A list of hosts.
+        """
+        if filter is None:
+            filter = ""
+        else:
+            filter = "&" + filter
+
+        all_hosts = self.request_get(f"/api/v1/discovery/hosts?page={page}&pageSize={pageSize}{filter}")
+        if "items" in all_hosts:
+            return [TuoniDataHost(host_data, self) for host_data in all_hosts["items"]]
+        return []
+        
+    def add_datamodel_host(self, address, name, note):
+        """
+        Add a host data model entry.
+
+        Args:
+            address (str): The host address.
+            name (str): Given name to the host.
+            note (str): Additional notes.
+
+        Returns:
+            TuoniDataHost: The newly created host.
+
+        Examples:
+            >>> host = tuoni_server.add_datamodel_host("10.20.30.40", "WS1", "Open windows machine")
+        """
+        json_data = {
+            "address": address,
+            "name": name,
+            "note": note
+        }
+        host_data = self.request_post("/api/v1/discovery/hosts", json_data, None)
+        return TuoniDataHost(host_data, self)
+    
+    def load_datamodel_services(self, page = 0, pageSize = 256, filter = None):
+        """
+        Retrieve a list of services.
+
+        Returns:
+            list[TuoniDataService]: A list of services.
+        """
+        if filter is None:
+            filter = ""
+        else:
+            filter = "&" + filter
+
+        all_services = self.request_get(f"/api/v1/discovery/services?page={page}&pageSize={pageSize}{filter}")
+        if "items" in all_services:
+            return [TuoniDataService(service_data, self) for service_data in all_services["items"]]
+        return []
+        
+    def add_datamodel_service(self, address, port, protocol, banner, note):
+        """
+        Add a service data model entry.
+
+        Args:
+            address (str): The service address.
+            port (int): Port number.
+            protocol (str): Service protocol.
+            banner (str): Service banner.
+            note (str): Additional notes.
+
+        Returns:
+            TuoniDataService: The newly created service.
+
+        Examples:
+            >>> service = tuoni_server.add_datamodel_service("10.20.30.40", "443", "HTTPS", "", "")
+        """
+        json_data = {
+            "address": address,
+            "port": port,
+            "protocol": protocol,
+            "banner": banner,
+            "note": note
+        }
+        service_data = self.request_post("/api/v1/discovery/services", json_data, None)
+        return TuoniDataService(service_data, self)
+    
+    def load_datamodel_credentials(self, page = 0, pageSize = 256, filter = None):
+        """
+        Retrieve a list of credentials.
+
+        Returns:
+            list[TuoniDataCredential]: A list of credentials.
+        """
+        if filter is None:
+            filter = ""
+        else:
+            filter = "&" + filter
+
+        all_credentials = self.request_get(f"/api/v1/discovery/credentials?page={page}&pageSize={pageSize}{filter}")
+        if "items" in all_credentials:
+            return [TuoniDataCredential(credential_data, self) for credential_data in all_credentials["items"]]
+        return []
+        
+    def add_datamodel_credential(self, username, password, host, realm, source, note):
+        """
+        Add a credential data model entry.
+
+        Args:
+            username (str): The username.
+            password (str): The password.
+            host (str): Host where credential works.
+            realm (str): Credential realm.
+            source (str): Source of the credential.
+            note (str): Additional notes.
+
+        Returns:
+            TuoniDataCredential: The newly created credential.
+
+        Examples:
+            >>> credential = tuoni_server.add_datamodel_credential(
+            >>>     "rick", 
+            >>>     "NeverGonnaBypassYourEDR", 
+            >>>     "10.20.30.40", 
+            >>>     "", "", ""
+            >>> )
+        """
+        json_data = {
+            "username": username,
+            "password": password,
+            "host": host,
+            "realm": realm,
+            "source": source,
+            "note": note
+        }
+        credential_data = self.request_post("/api/v1/discovery/credentials", json_data, None)
+        return TuoniDataCredential(credential_data, self)
 
     def let_it_run(self):
         """

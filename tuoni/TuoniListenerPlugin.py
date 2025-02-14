@@ -47,7 +47,9 @@ class TuoniListenerPlugin:
             TuoniListener: An object representing the newly created listener.
 
         Examples:
-            >>> http_listener_plugin = tuoni_server.load_listener_plugins()["shelldot.listener.agent-reverse-http"]
+            >>> http_listener_plugin = tuoni_server.load_listener_plugins()[
+            >>>     "shelldot.listener.agent-reverse-http"
+            >>> ]
             >>> conf = http_listener_plugin.conf_examples["default"]
             >>> conf["sleep"] = 2
             >>> conf["instantResponses"] = True

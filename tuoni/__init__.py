@@ -19,6 +19,10 @@ from .TuoniPayloadPlugin import TuoniPayloadPlugin
 from .TuoniResult import TuoniResult
 from .TuoniResultPart import TuoniResultPart
 from .TuoniUser import TuoniUser
+from .TuoniFile import TuoniFile
+from .TuoniDataHost import TuoniDataHost
+from .TuoniDataService import TuoniDataService
+from .TuoniDataCredential import TuoniDataCredential
 
 
 __all__ = [
@@ -32,6 +36,10 @@ __all__ = [
     'TuoniResult',
     'TuoniResultPart',
     'TuoniUser',
+    'TuoniFile',
+    "TuoniDataHost",
+    "TuoniDataService",
+    "TuoniDataCredential",
     
     'ExceptionTuoniAuthentication',
     'ExceptionTuoniRequestFailed',
