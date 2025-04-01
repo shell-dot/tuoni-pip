@@ -109,11 +109,11 @@ class TuoniAgent:
 
     def delete(self):
         """
-        Deletes agent.
+        Deletes agent (actually makes it inactive but close enough).
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
-        self.c2.request_delete("/api/v1/agents/%s" % self.guid)
+        self.c2.request_put("/api/v1/agents/%s/inactive" % self.guid)
         self.listener_id = None
         
     def _fill_available_commands(self, command_list):
@@ -122,4 +122,3 @@ class TuoniAgent:
             if cmd["id"] in command_list:
                 self.availableCommands[cmd["name"]] = cmd["id"]
             
-

@@ -95,7 +95,7 @@ class TuoniCommand:
 
     def wait_result(self, interval = 1, maxWait = 0):
         """
-        Wait for the command result object to be available.
+        Wait for the command result object to be available (command done or in case of ongoing result, the initial results)
 
         Args:
             interval (int): The interval, in seconds, to reload the data from the server.
@@ -113,4 +113,46 @@ class TuoniCommand:
                 if maxWait <= 0:
                     return None
         return TuoniResult(self.result, self.c2)
+
+    def wait_done(self, interval = 1, maxWait = 0):
+        """
+        Wait for the command to be done (success or failed).
+
+        Args:
+            interval (int): The interval, in seconds, to reload the data from the server.
+            maxWait (int): The maximum time to wait, in seconds, before giving up. A value of 0 means wait indefinitely.
+
+        Returns:
+            TuoniResult: The result object containing the data from the command execution, if available within the specified time.
+        """
+        self.reload()
+        while self.result is None or self.result["status"] == "ongoing":
+            time.sleep(interval)
+            self.reload()
+            if maxWait > 0:
+                maxWait -= interval
+                if maxWait <= 0:
+                    return None
+        return TuoniResult(self.result, self.c2)
+    
+    def wait_sent(self, interval = 1, maxWait = 0):
+        """
+        Wait for the command to be sent
+
+        Args:
+            interval (int): The interval, in seconds, to reload the data from the server.
+            maxWait (int): The maximum time to wait, in seconds, before giving up. A value of 0 means wait indefinitely.
+
+        Returns:
+            bool: Was command sent
+        """
+        self.reload()
+        while self.sent is None:
+            time.sleep(interval)
+            self.reload()
+            if maxWait > 0:
+                maxWait -= interval
+                if maxWait <= 0:
+                    return False
+        return True
 

@@ -47,7 +47,7 @@ class TuoniDataService:
 
     def archive(self):
         """
-        Archive the file.
+        Archive the service.
         """
         if self.id is None:
             raise ExceptionTuoniDeleted("")

@@ -25,9 +25,9 @@ class TuoniC2:
     The primary class for establishing connections to and managing interactions with the Tuoni server. It provides functionality for controlling server operations and facilitating communication.
 
     Args:
-        verify (str | bool) [default = True]: A flag to enable or disable SSL verification. If a string is provided, it is treated as the path to a CA bundle file.
+        verify (str | bool) [default = False]: A flag to enable or disable SSL verification. If a string is provided, it is treated as the path to a CA bundle file.
     """
-    def __init__(self, verify: str | bool = True):
+    def __init__(self, verify: str | bool = False):
         self._token: str = None
         self._url: str = None
         self._monitoring_threads: list = []
@@ -68,7 +68,7 @@ class TuoniC2:
             raise ExceptionTuoniAuthentication("You have not done the login")
 
     def _set_verify(self, verify: str | bool):
-        self._verify = True
+        self._verify = False
         if isinstance(verify, bool) and verify:
             self._verify = True
         elif isinstance(verify, bool) and not verify:
@@ -292,14 +292,24 @@ class TuoniC2:
         """
         self.request_get_file(f"/api/v1/payloads/{payload_id}/download", file_name)
 
-    def load_agents(self):
+    def load_agents(self, active = True, unactive = False):
         """
         Retrieve a list of agents.
+        
+        Args:
+            active (bool): Should active agents be returned
+            unactive (bool): Should unactive agents be returned
 
         Returns:
             list[TuoniAgent]: A list of agents.
         """
-        agents_data = self.request_get("/api/v1/agents/active")
+        agents_data = []
+        if active and not unactive:
+            agents_data = self.request_get("/api/v1/agents/active")
+        elif not active and unactive:
+            agents_data = self.request_get("/api/v1/agents/inactive")
+        elif active and unactive:
+            agents_data = self.request_get("/api/v1/agents")
         return [TuoniAgent(agent_data, self) for agent_data in agents_data]
 
     def wait_new_agent(self, interval: int = 1, max_wait: int = 0):

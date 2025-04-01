@@ -49,7 +49,7 @@ class TuoniDataCredential:
 
     def archive(self):
         """
-        Archive the file.
+        Archive the credentials.
         """
         if self.id is None:
             raise ExceptionTuoniDeleted("")
