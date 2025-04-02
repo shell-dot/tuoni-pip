@@ -6,6 +6,7 @@ import threading
 import shutil
 import base64
 import inspect
+from pathlib import Path
 from tuoni.TuoniExceptions import *
 from tuoni.TuoniListenerPlugin import *
 from tuoni.TuoniListener import *
@@ -22,11 +23,15 @@ from tuoni.TuoniDataCredential import *
 class TuoniC2:
     """
     The primary class for establishing connections to and managing interactions with the Tuoni server. It provides functionality for controlling server operations and facilitating communication.
+
+    Args:
+        verify (str | bool) [default = True]: A flag to enable or disable SSL verification. If a string is provided, it is treated as the path to a CA bundle file.
     """
-    def __init__(self):
+    def __init__(self, verify: str | bool = True):
         self._token: str = None
         self._url: str = None
         self._monitoring_threads: list = []
+        self._set_verify(verify)
 
     def login(self, url: str, username: str, password: str):
         """
@@ -39,13 +44,20 @@ class TuoniC2:
 
         Examples:
             >>> tuoni_server = TuoniC2()
+            # Disabling SSL verification
+            >>> tuoni_server = TuoniC2(verify=False)
+            # Set path for CA bunle
+            >>> tuoni_server = TuoniC2(verify="/path/to/ca_bundle.pem")
+            # Login to the server
             >>> tuoni_server.login("https://localhost:8443", "my_user", "S3cr37")
+
+
         """
         headers = {
             "Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('utf-8')
         }
 
-        response = requests.post(f"{url}/api/v1/auth/login", headers=headers, verify=False)
+        response = requests.post(f"{url}/api/v1/auth/login", headers=headers, verify=self._verify)
         if response.status_code != 200:
             raise ExceptionTuoniAuthentication(response.text)
         self._token = response.text
@@ -54,6 +66,19 @@ class TuoniC2:
     def _request_check(self):
         if self._token is None:
             raise ExceptionTuoniAuthentication("You have not done the login")
+
+    def _set_verify(self, verify: str | bool):
+        self._verify = True
+        if isinstance(verify, bool) and verify:
+            self._verify = True
+        elif isinstance(verify, bool) and not verify:
+            self._verify = False
+        elif isinstance(verify, str):
+            if Path(verify).is_file():
+                self._verify = verify
+            else:
+                raise Exception("The path to the CA bundle is not valid")
+
 
     @staticmethod
     def _raise_request_exception(result_msg: str):
@@ -67,7 +92,7 @@ class TuoniC2:
     def _make_request(self, method: str, uri: str, **kwargs):
         self._request_check()
         headers = {"Authorization": f"Bearer {self._token}"}
-        response = requests.request(method, f"{self._url}{uri}", headers=headers, verify=False, **kwargs)
+        response = requests.request(method, f"{self._url}{uri}", headers=headers, verify=self._verify, **kwargs)
         if response.status_code != 200:
             self._raise_request_exception(response.text)
         return response
@@ -103,19 +128,19 @@ class TuoniC2:
     def request_post(self, uri: str, json_data: dict = None, files: dict = None):
         """
         Send a POST request to the Tuoni server.
-        
+
         Args:
             uri (str): The URI endpoint to send the request to.
             json_data (dict): A dictionary containing the JSON payload to include in the POST request.
             files (dict): A dictionary of files to upload with the POST request.
-        
+
         Returns:
             dict: The server's response as a dictionary.
 
         Examples:
             >>> tuoni = TuoniC2()
             >>> tuoni_server.request_post(
-            >>>     "/api/v1/command-alias", 
+            >>>     "/api/v1/command-alias",
             >>>     {
             >>>         "name": "bofX",
             >>>         "description": "Example",
@@ -135,16 +160,16 @@ class TuoniC2:
                 all_data[var_name] = (file_info[0], file_info[1], 'application/octet-stream')
             response = self._make_request("POST", uri, files=all_data)
         return json.loads(response.text) if response.text else None
-    
+
     def request_patch(self, uri: str, json_data: dict = None, files: dict = None):
         """
         Send a PATCH request to the Tuoni server.
-        
+
         Args:
             uri (str): The URI endpoint to send the request to.
             json_data (dict): A dictionary containing the JSON payload to include in the POST request.
             files (dict): A dictionary of files to upload with the POST request.
-        
+
         Returns:
             dict: The server's response as a dictionary.
         """
@@ -162,11 +187,11 @@ class TuoniC2:
     def request_put(self, uri: str, json_data: dict = None):
         """
         Send a PUT request to the Tuoni server.
-        
+
         Args:
             uri (str): The URI endpoint to send the request to.
             json_data (dict): A dictionary containing the JSON payload to include in the PUT request.
-        
+
         Returns:
             dict: The server's response as a dictionary.
         """
@@ -190,7 +215,7 @@ class TuoniC2:
     def load_listener_plugins(self):
         """
         Retrieve a list of listener plugins.
-        
+
         Returns:
             list[TuoniListenerPlugin]: A list of available listener plugins.
 
@@ -209,7 +234,7 @@ class TuoniC2:
     def load_listeners(self):
         """
         Retrieve a list of listeners.
-        
+
         Returns:
             list[TuoniListener]: A list of active listeners.
         """
@@ -219,7 +244,7 @@ class TuoniC2:
     def load_payload_plugins(self):
         """
         Retrieve a list of payload plugins.
-        
+
         Returns:
             list[TuoniPayloadPlugin]: A list of available payload plugins.
         """
@@ -242,8 +267,8 @@ class TuoniC2:
 
         Examples:
             >>> payload_id = tuoni_server.create_payload(
-            >>>     "shelldot.payload.windows-x64",  
-            >>>     listener_id, 
+            >>>     "shelldot.payload.windows-x64",
+            >>>     listener_id,
             >>>     {"type": "executable"}
             >>> )
         """
@@ -313,7 +338,7 @@ class TuoniC2:
             >>>     print(
             >>>         f"We got outselves a new agent {agent.guid} from {agent.metadata['hostname']}"
             >>>     )
-            >>> 
+            >>>
             >>> tuoni_server.on_new_agent(new_agent_callback)
         """
         monitor_thread = threading.Thread(target=self._monitor_for_new_agents, args=(function, interval), daemon=True)
@@ -334,13 +359,13 @@ class TuoniC2:
     def load_aliases(self):
         """
         Retrieve a list of aliases.
-        
+
         Returns:
             list[TuoniAlias]: A list of aliases.
         """
         all_aliases = self.request_get("/api/v1/command-alias")
         return [TuoniAlias(alias_data, self) for alias_data in all_aliases]
-        
+
     def add_alias(self, name, description, command_type, command_conf={}, files = None):
         """
         Add a new alias.
@@ -357,42 +382,42 @@ class TuoniC2:
 
         Examples:
             >>> alias1 = tuoni_server.add_alias(
-            >>>     "ls1", 
-            >>>     "Alias made with python lib based on 'ls' default command class", 
-            >>>     TuoniCommandLs, 
+            >>>     "ls1",
+            >>>     "Alias made with python lib based on 'ls' default command class",
+            >>>     TuoniCommandLs,
             >>>     {"depth": 1}
             >>> )
 
             >>> alias2 = tuoni_server.add_alias(
-            >>>     "ls2", 
-            >>>     "Alias made with python lib based on command string name", 
-            >>>     "ls", 
+            >>>     "ls2",
+            >>>     "Alias made with python lib based on command string name",
+            >>>     "ls",
             >>>     {"depth": 2}
             >>> )
 
             >>> alias3 = tuoni_server.add_alias(
-            >>>     "easm", 
-            >>>     "Alias for execute assembly default command class", 
-            >>>     TuoniCommandexecuteAssembly, 
-            >>>     {}, 
+            >>>     "easm",
+            >>>     "Alias for execute assembly default command class",
+            >>>     TuoniCommandexecuteAssembly,
+            >>>     {},
             >>>     files = {
             >>>         "executable": ["dotnet.exe",open("dotnet.exe", "rb").read()]
             >>>     }
             >>> )
 
             >>> alias4 = tuoni_server.add_alias(
-            >>>     "bof1", 
-            >>>     "Alias for bof based on command string name", 
-            >>>     "bof", 
+            >>>     "bof1",
+            >>>     "Alias for bof based on command string name",
+            >>>     "bof",
             >>>     files = {
             >>>         "bofFile": ["bof.o",open("bof.o", "rb").read()]
             >>>     }
             >>> )
 
             >>> alias5 = tuoni_server.add_alias(
-            >>>     "bof2", 
-            >>>     "Alias for bof based on command ID", 
-            >>>     "2ac58f33-d35e-4afd-a1ac-00e460ceb9f4", 
+            >>>     "bof2",
+            >>>     "Alias for bof based on command ID",
+            >>>     "2ac58f33-d35e-4afd-a1ac-00e460ceb9f4",
             >>>     files = {
             >>>         "bofFile": ["bof.o",open("bof.o", "rb").read()]
             >>>     }
@@ -404,7 +429,7 @@ class TuoniC2:
             command_type = command_type.command_type
         if inspect.isclass(command_type) and issubclass(command_type, TuoniDefaultCommand):
             command_type = command_type._class_base_type
-    
+
         json_data = {
             "name": name,
             "description": description,
@@ -423,7 +448,7 @@ class TuoniC2:
         """
         all_files = self.request_get("/api/v1/files")
         return [TuoniFile(file_data, self) for file_data in all_files]
-        
+
     def add_hosted(self, filename, file_content, original_filename = None):
         """
         Add a hosted file.
@@ -441,7 +466,7 @@ class TuoniC2:
         if original_filename is None:
             original_filename = os.path.basename(filename)
         return self.request_post("/api/v1/files", files = {filename: [original_filename, file_content]})
-        
+
     def delete_hosted(self, hosted):
         """
         Delete a hosted file.
@@ -463,7 +488,7 @@ class TuoniC2:
         """
         all_users = self.request_get("/api/v1/users")
         return [TuoniUser(user_data, self) for user_data in all_users]
-        
+
     def add_user(self, username, password, authorities):
         """
         Add a new user.
@@ -478,8 +503,8 @@ class TuoniC2:
 
         Examples:
             >>> user = tuoni_server.add_user(
-            >>>     "cool_new_user", 
-            >>>     "cool_new_password", 
+            >>>     "cool_new_user",
+            >>>     "cool_new_password",
             >>>     [
             >>>         "MANAGE_LISTENERS",
             >>>         "MANAGE_USERS",
@@ -498,7 +523,7 @@ class TuoniC2:
         }
         user_data = self.request_post("/api/v1/users", json_data, None)
         return TuoniUser(user_data, self)
-    
+
     def load_datamodel_hosts(self, page = 0, pageSize = 256, filter = None):
         """
         Retrieve a list of hosts.
@@ -515,7 +540,7 @@ class TuoniC2:
         if "items" in all_hosts:
             return [TuoniDataHost(host_data, self) for host_data in all_hosts["items"]]
         return []
-        
+
     def add_datamodel_host(self, address, name, note):
         """
         Add a host data model entry.
@@ -538,7 +563,7 @@ class TuoniC2:
         }
         host_data = self.request_post("/api/v1/discovery/hosts", json_data, None)
         return TuoniDataHost(host_data, self)
-    
+
     def load_datamodel_services(self, page = 0, pageSize = 256, filter = None):
         """
         Retrieve a list of services.
@@ -555,7 +580,7 @@ class TuoniC2:
         if "items" in all_services:
             return [TuoniDataService(service_data, self) for service_data in all_services["items"]]
         return []
-        
+
     def add_datamodel_service(self, address, port, protocol, banner, note):
         """
         Add a service data model entry.
@@ -582,7 +607,7 @@ class TuoniC2:
         }
         service_data = self.request_post("/api/v1/discovery/services", json_data, None)
         return TuoniDataService(service_data, self)
-    
+
     def load_datamodel_credentials(self, page = 0, pageSize = 256, filter = None):
         """
         Retrieve a list of credentials.
@@ -599,7 +624,7 @@ class TuoniC2:
         if "items" in all_credentials:
             return [TuoniDataCredential(credential_data, self) for credential_data in all_credentials["items"]]
         return []
-        
+
     def add_datamodel_credential(self, username, password, host, realm, source, note):
         """
         Add a credential data model entry.
@@ -617,9 +642,9 @@ class TuoniC2:
 
         Examples:
             >>> credential = tuoni_server.add_datamodel_credential(
-            >>>     "rick", 
-            >>>     "NeverGonnaBypassYourEDR", 
-            >>>     "10.20.30.40", 
+            >>>     "rick",
+            >>>     "NeverGonnaBypassYourEDR",
+            >>>     "10.20.30.40",
             >>>     "", "", ""
             >>> )
         """
@@ -636,7 +661,7 @@ class TuoniC2:
 
     def let_it_run(self):
         """
-        Block execution and wait indefinitely if any callback functions are initialized, 
+        Block execution and wait indefinitely if any callback functions are initialized,
         or until all monitoring threads have completed.
         """
         for monitoring_thread in self._monitoring_threads:
