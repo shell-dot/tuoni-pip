@@ -122,3 +122,21 @@ class TuoniAgent:
             if cmd["id"] in command_list:
                 self.availableCommands[cmd["name"]] = cmd["id"]
             
+    def setCustomProperties(self, name, value):
+        """
+        Adds or updates a property in the agents customProperties metadata.
+
+        Parameters:
+            name (str): The name (key) of the property to add or update.
+            value (Any): The value to assign to the given name.
+
+        Behavior:
+            - If the property with the given name exists, its value will be updated.
+            - If it does not exist, a new name/value pair will be added.
+            - If value is None the name/value pair will be deleted.
+
+        Example:
+            myAgent.setCustomProperties("notes", "Domain Controller")
+        """
+        self.metadata['customProperties'][name] = value
+        self.c2.request_put(f"/api/v1/agents/{self.guid}/metadata", self.metadata)
