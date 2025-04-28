@@ -38,7 +38,7 @@ class TuoniDataHost:
         """
         if self.id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/discovery/host/%s" % self.id)
+        data = self.c2.request_get(f"/api/v1/discovery/host/{self.id}")
         self._load_conf(data)
 
     def archive(self):
@@ -59,6 +59,6 @@ class TuoniDataHost:
             "name": self.name,
             "note": self.note
         }
-        self.c2.request_patch("/api/v1/discovery/host/%s" % self.id, req)
+        self.c2.request_patch(f"/api/v1/discovery/host/{self.id}", req)
         self.reload()
 

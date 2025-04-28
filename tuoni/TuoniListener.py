@@ -38,7 +38,7 @@ class TuoniListener:
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_put("/api/v1/listeners/%s/stop" % self.listener_id)
+        data = self.c2.request_put(f"/api/v1/listeners/{self.listener_id}/stop")
         self._load_conf(data)
 
     def start(self):
@@ -47,7 +47,7 @@ class TuoniListener:
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_put("/api/v1/listeners/%d/start" % self.listener_id)
+        data = self.c2.request_put(f"/api/v1/listeners/{self.listener_id}/start")
         self._load_conf(data)
 
     def delete(self):
@@ -56,7 +56,7 @@ class TuoniListener:
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
-        self.c2.request_delete("/api/v1/listeners/%d" % self.listener_id)
+        self.c2.request_delete(f"/api/v1/listeners/{self.listener_id}")
         self.listener_id = None
 
     def reload(self):
@@ -65,7 +65,7 @@ class TuoniListener:
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/listeners/%d" % self.listener_id)
+        data = self.c2.request_get(f"/api/v1/listeners/{self.listener_id}")
         self._load_conf(data)
 
     def update(self,):
@@ -78,7 +78,7 @@ class TuoniListener:
             "configuration": self.configuration,
             "name": self.name
         }
-        self.c2.request_patch("/api/v1/listeners/%d" % self.listener_id, req)
+        self.c2.request_patch(f"/api/v1/listeners/{self.listener_id}", req)
         self.reload()
 
 

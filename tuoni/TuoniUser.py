@@ -33,7 +33,7 @@ class TuoniUser:
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/users/%s" % self.username)
+        data = self.c2.request_get(f"/api/v1/users/{self.username}")
         self._load_conf(data)
 
     def disable(self):
@@ -41,7 +41,7 @@ class TuoniUser:
         Disable the user.
         """
         data = {"enabled": False, "authorities": self.authorities}
-        data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
+        data = self.c2.request_put(f"/api/v1/users/{self.username}", data)
         self._load_conf(data)
 
     def enable(self):
@@ -49,7 +49,7 @@ class TuoniUser:
         Enable the user.
         """
         data = {"enabled": True, "authorities": self.authorities}
-        data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
+        data = self.c2.request_put(f"/api/v1/users/{self.username}", data)
         self._load_conf(data)
 
     def set_authorities(self, authorities):
@@ -57,7 +57,7 @@ class TuoniUser:
         Change the authorities assigned to the user.
         """
         data = {"authorities": authorities, "enabled": self.enabled}
-        data = self.c2.request_put("/api/v1/users/%s" % self.username, data)
+        data = self.c2.request_put(f"/api/v1/users/{self.username}", data)
         self._load_conf(data)
 
     def set_password(self, new_password):
@@ -65,7 +65,7 @@ class TuoniUser:
         Set a new password for the user.
         """
         data = {"newPassword": new_password}
-        data = self.c2.request_put("/api/v1/users/%s/password" % self.username, data)
+        data = self.c2.request_put(f"/api/v1/users/{self.username}/password", data)
         
     
 

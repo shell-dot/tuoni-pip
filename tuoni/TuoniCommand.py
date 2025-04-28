@@ -41,7 +41,7 @@ class TuoniCommand:
         """
         if self.command_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/commands/%d" % self.command_id)
+        data = self.c2.request_get(f"/api/v1/commands/{self.command_id}")
         self._load_conf(data)
 
     def result_status_done(self, reload = True):
@@ -56,7 +56,7 @@ class TuoniCommand:
         self.reload()
         if self.result is None:
             return False
-        if self.result["status"] == "ongoing":
+        if self.result["status"].lower() == "ongoing":
             return False
         return True
 
@@ -72,7 +72,7 @@ class TuoniCommand:
         self.reload()
         if self.result is None:
             return False
-        if self.result["status"] == "ongoing":
+        if self.result["status"].lower() == "ongoing":
             return True
         return False
 
@@ -126,7 +126,7 @@ class TuoniCommand:
             TuoniResult: The result object containing the data from the command execution, if available within the specified time.
         """
         self.reload()
-        while self.result is None or self.result["status"] == "ongoing":
+        while self.result is None or self.result["status"].lower() == "ongoing":
             time.sleep(interval)
             self.reload()
             if maxWait > 0:
@@ -156,3 +156,72 @@ class TuoniCommand:
                     return False
         return True
 
+    def is_done(self, reload_from_server = False):
+        """
+        Checks has the command done/finished
+
+        Args:
+            reload_from_server (bool): Should command data be reloaded from server.
+
+        Returns:
+            bool: Is command done
+        """
+        if reload_from_server:
+            self.reload()
+        return (self.result is not None and self.result["status"].lower() != "ongoing")
+
+    def is_success(self, reload_from_server = False):
+        """
+        Checks was the command successful
+
+        Args:
+            reload_from_server (bool): Should command data be reloaded from server.
+
+        Returns:
+            bool: Was command successful
+        """
+        if reload_from_server:
+            self.reload()
+        return (self.result is not None and self.result["status"].lower() == "success")
+
+    def is_failed(self, reload_from_server = False):
+        """
+        Checks did the command fail
+
+        Args:
+            reload_from_server (bool): Should command data be reloaded from server.
+
+        Returns:
+            bool: Did command fail
+        """
+        if reload_from_server:
+            self.reload()
+        return (self.result is not None and self.result["status"].lower() == "failed")
+
+    def is_ongoing(self, reload_from_server = False):
+        """
+        Checks is the command running as ongoing command
+
+        Args:
+            reload_from_server (bool): Should command data be reloaded from server.
+
+        Returns:
+            bool: Is command ongoing
+        """
+        if reload_from_server:
+            self.reload()
+        return (self.result is not None and self.result["status"].lower() == "ongoing")
+
+    def is_sent(self, reload_from_server = False):
+        """
+        Checks was the command sent to the agent
+
+        Args:
+            reload_from_server (bool): Should command data be reloaded from server.
+
+        Returns:
+            bool: Is command sent to agent
+        """
+        if reload_from_server:
+            self.reload()
+        return (self.sent is not None)

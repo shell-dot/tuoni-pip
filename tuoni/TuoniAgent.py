@@ -87,7 +87,7 @@ class TuoniAgent:
         }
         if execution_conf is not None:
             data["execConf"] = execution_conf
-        data = self.c2.request_post("/api/v1/agents/%s/commands" % self.guid, data, files)
+        data = self.c2.request_post(f"/api/v1/agents/{self.guid}/commands", data, files)
         return TuoniCommand(data, self.c2)
 
     def get_commands(self):
@@ -99,7 +99,7 @@ class TuoniAgent:
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
-        commands_data = self.c2.request_get("/api/v1/agents/%s/commands" % self.guid)
+        commands_data = self.c2.request_get(f"/api/v1/agents/{self.guid}/commands")
         commands = []
         for command_nr in commands_data:
             command_data = commands_data[command_nr]
@@ -113,7 +113,7 @@ class TuoniAgent:
         """
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
-        self.c2.request_put("/api/v1/agents/%s/inactive" % self.guid)
+        self.c2.request_put(f"/api/v1/agents/{self.guid}/inactive")
         self.listener_id = None
         
     def _fill_available_commands(self, command_list):

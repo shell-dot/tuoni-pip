@@ -38,7 +38,7 @@ class TuoniFile:
         """
         if self.fileId is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/file/%s" % self.fileId)
+        data = self.c2.request_get(f"/api/v1/file/{self.fileId}")
         self._load_conf(data)
 
     def delete(self):
@@ -47,7 +47,7 @@ class TuoniFile:
         """
         if self.fileId is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_delete("/api/v1/file/%s" % self.fileId)
+        data = self.c2.request_delete(f"/api/v1/file/{self.fileId}")
         self._load_conf(data)
 
     def download(self, filename):

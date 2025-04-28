@@ -18,6 +18,7 @@ from tuoni.TuoniFile import *
 from tuoni.TuoniDataHost import *
 from tuoni.TuoniDataService import *
 from tuoni.TuoniDataCredential import *
+from tuoni.TuoniJob import *
 
 
 class TuoniC2:
@@ -538,6 +539,11 @@ class TuoniC2:
         """
         Retrieve a list of hosts.
 
+        Args:
+            page (int): Page of the result.
+            pageSize (int): How many results per page.
+            filter (str): Additional filters.
+
         Returns:
             list[TuoniDataHost]: A list of hosts.
         """
@@ -577,6 +583,11 @@ class TuoniC2:
     def load_datamodel_services(self, page = 0, pageSize = 256, filter = None):
         """
         Retrieve a list of services.
+
+        Args:
+            page (int): Page of the result.
+            pageSize (int): How many results per page.
+            filter (str): Additional filters.
 
         Returns:
             list[TuoniDataService]: A list of services.
@@ -621,6 +632,11 @@ class TuoniC2:
     def load_datamodel_credentials(self, page = 0, pageSize = 256, filter = None):
         """
         Retrieve a list of credentials.
+
+        Args:
+            page (int): Page of the result.
+            pageSize (int): How many results per page.
+            filter (str): Additional filters.
 
         Returns:
             list[TuoniDataCredential]: A list of credentials.
@@ -668,6 +684,28 @@ class TuoniC2:
         }
         credential_data = self.request_post("/api/v1/discovery/credentials", json_data, None)
         return TuoniDataCredential(credential_data, self)
+
+    def load_jobs(self, page = 0, pageSize = 256, sort_col = "id", sort_order = "asc", inactives = False):
+        """
+        Retrieve a list of jobs.
+
+        Args:
+            page (int): Page of the result.
+            pageSize (int): How many results per page.
+            sort_col (str): Based of what field to sort
+            sort_order (str): Order of sort
+            inactives (bool): Should also inactive jobs be returned
+
+
+        Returns:
+            list[TuoniJob]: A list of jobs.
+        """
+        sort_col = "&" + sort_col + ":" + sort_order
+        urlEnd = "all" if inactives else "active"
+        all_jobs = self.request_get(f"/api/v1/jobs/{urlEnd}?page={page}&pageSize={pageSize}{sort_col}")
+        if "items" in all_jobs:
+            return [TuoniJob(job_data, self) for job_data in all_jobs["items"]]
+        return []
 
     def let_it_run(self):
         """

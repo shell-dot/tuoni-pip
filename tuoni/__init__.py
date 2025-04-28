@@ -23,6 +23,8 @@ from .TuoniFile import TuoniFile
 from .TuoniDataHost import TuoniDataHost
 from .TuoniDataService import TuoniDataService
 from .TuoniDataCredential import TuoniDataCredential
+from .TuoniJob import TuoniJob
+from .TuoniEvent import TuoniEvent
 
 
 __all__ = [
@@ -40,6 +42,8 @@ __all__ = [
     "TuoniDataHost",
     "TuoniDataService",
     "TuoniDataCredential",
+    "TuoniJob",
+    "TuoniEvent",
     
     'ExceptionTuoniAuthentication',
     'ExceptionTuoniRequestFailed',

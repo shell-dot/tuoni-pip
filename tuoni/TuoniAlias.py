@@ -44,7 +44,7 @@ class TuoniAlias:
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get("/api/v1/command-alias/%s" % self.alias_id)
+        data = self.c2.request_get(f"/api/v1/command-alias/{self.alias_id}")
         self._load_conf(data)
 
     def delete(self):
@@ -53,6 +53,6 @@ class TuoniAlias:
         """
         if self.alias_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_delete("/api/v1/command-alias/%s" % self.alias_id)
+        data = self.c2.request_delete(f"/api/v1/command-alias/{self.alias_id}")
         self._load_conf(data)
 
