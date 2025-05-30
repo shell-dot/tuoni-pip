@@ -1,4 +1,5 @@
 import random
+import os
 from tuoni.TuoniListener import *
 
 class TuoniListenerPlugin:
@@ -35,13 +36,14 @@ class TuoniListenerPlugin:
                 self.conf_examples[example["name"]] = example["configuration"]
         self.c2 = c2
 
-    def create(self, new_listener_conf, new_listener_name=None):
+    def create(self, new_listener_conf, new_listener_name=None, keystore_path=None):
         """
         Create a new listener.
 
         Args:
             new_listener_conf (dict): The configuration for the new listener.
             new_listener_name (str): The name to assign to the new listener.
+            keystore_path (str): Path to a keystore file that will be used by the listener.
 
         Returns:
             TuoniListener: An object representing the newly created listener.
@@ -59,9 +61,18 @@ class TuoniListenerPlugin:
             "plugin": self.plugin_id,
             "configuration": new_listener_conf
         }
+        file_data = None
+
         if new_listener_name is not None:
             json_data["name"] = new_listener_name
-        listener_data = self.c2.request_post("/api/v1/listeners", json_data)
+
+        if keystore_path is not None:
+            with open(keystore_path, "rb") as f:
+                keystore_content = f.read()
+
+            file_data = { "keystoreFile": ( os.path.basename(keystore_path), keystore_content ) }
+
+        listener_data = self.c2.request_post("/api/v1/listeners", json_data, file_data)
         listener_obj = TuoniListener(listener_data, self.c2)
         return listener_obj
 
