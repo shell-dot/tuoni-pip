@@ -63,6 +63,16 @@ class TuoniResultPart:
             self.c2.request_get_file(self.uri, filename)
         return None
 
+    def get_as_bytes(self):
+        """
+        Retrieve the value of the result part as bytes.
+        """        
+        if self.type == "file":
+            return self.c2.request_get(self.uri, result_as_json=False, result_as_bytes=True)
+        if self.type == "text":
+            return self.value.encode('utf-8')
+        return None
+
     def get_as_json(self):
         """
         Retrieve the value of the result part as JSON and convert it to a dictionary.
@@ -75,6 +85,3 @@ class TuoniResultPart:
         if self.type == "file":
             return json.loads(self.c2.request_get(self.uri, result_as_json=False))
         return None
-
-
-

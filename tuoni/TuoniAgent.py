@@ -2,6 +2,7 @@ from tuoni.TuoniExceptions import *
 from tuoni.TuoniCommand import *
 from tuoni.TuoniAlias import *
 from tuoni.TuoniDefaultCommands import *
+import warnings
 
 class TuoniAgent:
     """
@@ -52,7 +53,7 @@ class TuoniAgent:
             TuoniCommand: An object representing the created command.
 
         Examples:
-            >>> command1 = agent.send_command(TuoniCommandLs(".\subdir", 2))
+            >>> command1 = agent.send_command(TuoniCommandLs(".\\subdir", 2))
             >>> command2 = agent.send_command(
             >>>     TuoniCommandProcinfo(), 
             >>>     execution_conf ={"execType": "NEW"}
@@ -64,7 +65,7 @@ class TuoniAgent:
             >>>         "pid": 1234
             >>>     }
             >>> )
-            >>> command4 = agent.send_command("ls", {"dir": ".\subdir", "depth": 2})
+            >>> command4 = agent.send_command("ls", {"dir": ".\\subdir", "depth": 2})
             >>> command5 = agent.send_command(
             >>>     alias_object, 
             >>>     {"conf_value_name": "conf_value"}
@@ -121,8 +122,85 @@ class TuoniAgent:
         for cmd in self.c2.request_get("/api/v1/command-templates"):
             if cmd["id"] in command_list:
                 self.availableCommands[cmd["name"]] = cmd["id"]
+
+    def matches(self, criteria):
+        """
+        Check if the agent matches the given criteria.
+
+        Args:
+            criteria (dict): Dictionary containing matching criteria. Keys can 
+            use dot notation like 'metadata.os' to access nested attributes.
+
+        Returns:
+            bool: True if all criteria match, False otherwise.
+        """
+        
+        for key, expected_value in criteria.items():
+            # Handle dot notation for nested attributes
+            current_obj = self
             
+            # Split the key by dots and traverse the object
+            key_parts = key.split('.')
+            
+            try:
+                for part in key_parts:
+                    if hasattr(current_obj, part):
+                        current_obj = getattr(current_obj, part)
+                    elif isinstance(current_obj, dict) and part in current_obj:
+                        current_obj = current_obj[part]
+                    else:
+                        # Debug: print available attributes
+                        if hasattr(current_obj, '__dict__'):
+                            available_attrs = list(current_obj.__dict__.keys())
+                        elif isinstance(current_obj, dict):
+                            available_attrs = list(current_obj.keys())
+                        else:
+                            available_attrs = []
+                        return False
+                
+                # Compare the final value (case-insensitive for strings)
+                if isinstance(current_obj, str) and isinstance(expected_value, str):
+                    if current_obj.upper() != expected_value.upper():
+                        return False
+                else:
+                    if current_obj != expected_value:
+                        print(f"{Fore.YELLOW}Debug: Value mismatch for '{key}': got '{current_obj}', expected '{expected_value}'{Style.RESET_ALL}")
+                        return False
+                        
+            except (AttributeError, TypeError) as e:
+                print(f"{Fore.YELLOW}Debug: Exception accessing '{key}': {e}{Style.RESET_ALL}")
+                return False
+        
+        # All criteria matched
+        return True
+    
     def setCustomProperties(self, name, value):
+        """
+        .. deprecated
+            Use :func:`set_custom_property` instead.
+
+        Adds or updates a property in the agents customProperties metadata.
+        
+
+        Parameters:
+            name (str): The name (key) of the property to add or update.
+            value (Any): The value to assign to the given name.
+
+        Behavior:
+            - If the property with the given name exists, its value will be updated.
+            - If it does not exist, a new name/value pair will be added.
+            - If value is None the name/value pair will be deleted.
+
+        Example:
+            myAgent.setCustomProperties("notes", "Domain Controller")
+        """
+        warnings.warn(
+            f"Function setCustomProperties is deprecated; it will be removed in a future release. Please use `set_custom_property` instead.",
+            category=DeprecationWarning
+        )
+        self.set_custom_property(name, value)
+
+    def set_custom_property(self, name, value):
         """
         Adds or updates a property in the agents customProperties metadata.
 
@@ -136,7 +214,7 @@ class TuoniAgent:
             - If value is None the name/value pair will be deleted.
 
         Example:
-            myAgent.setCustomProperties("notes", "Domain Controller")
+            myAgent.set_custom_property("notes", "Domain Controller")
         """
         self.metadata['customProperties'][name] = value
         self.c2.request_put(f"/api/v1/agents/{self.guid}/metadata", self.metadata)

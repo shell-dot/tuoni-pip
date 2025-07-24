@@ -98,21 +98,26 @@ class TuoniC2:
             self._raise_request_exception(response.text)
         return response
 
-    def request_get(self, uri: str, result_as_json: bool = True):
+    def request_get(self, uri: str, result_as_json: bool = True, result_as_bytes: bool = False):
         """
         Send a GET request to the Tuoni server.
 
         Args:
             uri (str): The URI endpoint to send the request to.
             result_as_json (bool): If True, the server's response is treated as JSON and converted to a dictionary.
+            result_as_bytes (bool): If True, the server's response is returned as a bytes.
 
         Returns:
-            str | dict: The server's response, either as a raw string or a dictionary if `result_as_json` is True.
+            str | dict | bytes: The server's response, either as a raw string or a dictionary if `result_as_json` is True or as bytes if `result_as_bytes` is True.
         """
         response = self._make_request("GET", uri)
-        if response.text == "":
+        if len(response.content) == 0:
             return None
-        return json.loads(response.text) if result_as_json else response.text
+        if result_as_json:
+            return json.loads(response.text)
+        if result_as_bytes:
+            return response.content
+        return response.text
 
     def request_get_file(self, uri: str, file_name: str):
         """
