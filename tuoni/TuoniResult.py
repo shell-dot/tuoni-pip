@@ -32,4 +32,79 @@ class TuoniResult:
             part_obj = TuoniResultPart(part_conf, self.c2)
             self.parts.append(part_obj)
 
+    def is_string(self):
+        """
+        Check if the result contains typical string output (result part where name is "stdout").
+
+        Returns:
+            bool: True if the result is a string output, False otherwise.
+        """
+        for part in self.parts:
+            if part.type == "text" and part.name.lower() == "stdout":
+                return True
+        return False
+    
+    def is_json(self):
+        """
+        Check if the result contains JSON output (result part where name "json").
+
+        Returns:
+            bool: True if the result is a JSON output, False otherwise.
+        """
+        for part in self.parts:
+            if part.type == "text" and part.name.lower() == "json":
+                return True
+        return False
+    
+    def is_file(self):
+        """
+        Check if the result contains file output (result part where type is "file").
+
+        Returns:
+            bool: True if the result is a file output, False otherwise.
+        """
+        for part in self.parts:
+            if part.type == "file":
+                return True
+        return False
+    
+    def get_string(self):
+        """
+        Retrieve the string output from the result parts.
+
+        Returns:
+            str: The string output if available, otherwise None.
+        """
+        for part in self.parts:
+            if part.type == "text" and part.name.lower() == "stdout":
+                return part.get_as_text()
+        return None
+    
+    def get_json(self):
+        """
+        Retrieve the JSON output from the result parts.
+
+        Returns:
+            dict: The JSON output if available, otherwise None.
+        """
+        for part in self.parts:
+            if part.type == "text" and part.name.lower() == "json":
+                return part.get_as_json()
+        return None
+    
+    def get_files(self, download = False):
+        """
+        Retrieve the file outputs from the result parts.
+
+        Returns:
+            dict: A dictionary where keys are filenames and values are the file contents if download is True, otherwise a ResultPart object.
+        """
+        files = {}
+        for part in self.parts:
+            if part.type == "file":
+                if download:
+                    files[part.filename] = part.get_as_bytes()
+                else:
+                    files[part.filename] = part
+        return files
 

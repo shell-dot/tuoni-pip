@@ -35,14 +35,15 @@ class TuoniListenerPlugin:
                 self.conf_examples[example["name"]] = example["configuration"]
         self.c2 = c2
 
-    def create(self, new_listener_conf, new_listener_name=None):
+    def create(self, new_listener_conf, new_listener_name=None, new_listener_conf_files=None):
         """
         Create a new listener.
 
         Args:
             new_listener_conf (dict): The configuration for the new listener.
             new_listener_name (str): The name to assign to the new listener.
-
+            new_listener_conf_files (list): A list of tuples containing parameter names, file names, and file contents.
+            
         Returns:
             TuoniListener: An object representing the newly created listener.
 
@@ -61,7 +62,12 @@ class TuoniListenerPlugin:
         }
         if new_listener_name is not None:
             json_data["name"] = new_listener_name
-        listener_data = self.c2.request_post("/api/v1/listeners", json_data)
+        files_data = None
+        if new_listener_conf_files:
+            files_data = {}
+            for param_name, file_name, file_content in new_listener_conf_files:
+                files_data[param_name] = (file_name, file_content)
+        listener_data = self.c2.request_post("/api/v1/listeners", json_data, files=files_data)
         listener_obj = TuoniListener(listener_data, self.c2)
         return listener_obj
 
