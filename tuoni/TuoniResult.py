@@ -32,12 +32,12 @@ class TuoniResult:
             part_obj = TuoniResultPart(part_conf, self.c2)
             self.parts.append(part_obj)
 
-    def is_string(self):
+    def is_text(self):
         """
-        Check if the result contains typical string output (result part where name is "stdout").
+        Check if the result contains typical text output (result part where name is "stdout").
 
         Returns:
-            bool: True if the result is a string output, False otherwise.
+            bool: True if the result is a text output, False otherwise.
         """
         for part in self.parts:
             if part.type == "text" and part.name.lower() == "stdout":
@@ -68,12 +68,12 @@ class TuoniResult:
                 return True
         return False
     
-    def get_string(self):
+    def get_text(self):
         """
-        Retrieve the string output from the result parts.
+        Retrieve the text output from the result parts.
 
         Returns:
-            str: The string output if available, otherwise None.
+            str: The text output if available, otherwise None.
         """
         for part in self.parts:
             if part.type == "text" and part.name.lower() == "stdout":
