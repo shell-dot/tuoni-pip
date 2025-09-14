@@ -79,8 +79,8 @@ class TuoniCommandBof(TuoniDefaultCommand):
     Default command type "bof" helper class
     """
     _class_base_type = "bof"
-    def __init__(self, bof_file, method =  "go", inputArgs = None, inputArgsEncoding = None, inputAsBytes = None, pack_format = None, pack_args = None):
-        super().__init__("bof", {"method": method, "inputArgs": inputArgs, "inputArgsEncoding": inputArgsEncoding, "inputAsBytes": inputAsBytes, "pack_format": pack_format, "pack_args": pack_args})
+    def __init__(self, bof_file, method =  "go", inputArgs = None, inputArgsEncoding = None, inputAsBytes = None, pack_format = None, pack_args = None, designated_thread = None, keep_in_memory = None):
+        super().__init__("bof", {"method": method, "inputArgs": inputArgs, "inputArgsEncoding": inputArgsEncoding, "inputAsBytes": inputAsBytes, "pack_format": pack_format, "pack_args": pack_args, "designated_thread": designated_thread, "keep_in_memory": keep_in_memory})
         self.files = {"bofFile": ["filename.bin", bof_file]}
 
 

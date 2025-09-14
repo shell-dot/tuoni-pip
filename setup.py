@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'tuoni',
   packages = ['tuoni'],
-  version = '0.10.4-1',
+  version = '0.11.0',
   license='MIT', 
   description = 'Library to interact with Tuoni C2 API',
   author = 'Shelldot',
   author_email = 'info@shelldot.com',
   url = 'https://github.com/shell-dot/tuoni-pip',
-  download_url = 'https://github.com/shell-dot/tuoni-pip/archive/refs/tags/v_10_4-1.tar.gz',
+  download_url = 'https://github.com/shell-dot/tuoni-pip/archive/refs/tags/v_11_0.tar.gz',
   keywords = ['tuoni'],
   install_requires=['requests'],
   classifiers=[
@@ -25,6 +25,7 @@ setup(
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
-    'Programming Language :: Python :: 3.12'
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13'
   ]
 )
