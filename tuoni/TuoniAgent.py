@@ -2,6 +2,7 @@ from tuoni.TuoniExceptions import *
 from tuoni.TuoniCommand import *
 from tuoni.TuoniAlias import *
 from tuoni.TuoniDefaultCommands import *
+from tuoni.TuoniCommandTemplate import *
 import warnings
 
 class TuoniAgent:
@@ -44,7 +45,7 @@ class TuoniAgent:
         Send command to agent.
 
         Args:
-            command_type (str | TuoniAlias | TuoniDefaultCommand): What command to send.
+            command_type (str | TuoniAlias | TuoniDefaultCommand | TuoniCommandTemplate): What command to send.
             command_conf (dict): Command configuration.
             execution_conf (dict): Execution configuration.
             files (dict): Files to send with command.
@@ -78,6 +79,8 @@ class TuoniAgent:
             execution_conf = command_type.execution_conf
             files = command_type.files
             command_type = command_type.command_type
+        if isinstance(command_type, TuoniCommandTemplate):
+            command_type = command_type.id
         if isinstance(command_type, TuoniAlias):
             command_type = command_type.alias_id
         if command_conf is None:

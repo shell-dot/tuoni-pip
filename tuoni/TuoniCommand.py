@@ -9,6 +9,8 @@ class TuoniCommand:
 
     Attributes:
         command_id (int): The unique identifier of the command.
+        commandTemplateId (str): The unique identifier of the command template used to create the command.
+        commandTemplateName (str): The name of the command template used to create the command.
         configuration (dict): The configuration settings for the command.
         execConf (dict): The execution configuration for the command.
         created (str): The time, as a string, indicating when the command was created.
@@ -29,6 +31,8 @@ class TuoniCommand:
 
     def _load_conf(self, conf):
         self.command_id = conf["id"]
+        self.commandTemplateId = conf["commandTemplateId"]
+        self.commandTemplateName = conf["commandTemplateName"]
         self.configuration = conf["configuration"]
         self.execConf = conf["execConf"]
         self.created = conf["created"]
@@ -225,3 +229,12 @@ class TuoniCommand:
         if reload_from_server:
             self.reload()
         return (self.sent is not None)
+    
+    def get_template(self):
+        """
+        Retrieve the command template used to create this command.
+
+        Returns:
+            TuoniCommandTemplate: The command template object, or None if the template could not be found.
+        """
+        return self.c2.load_command_template(self.commandTemplateId)

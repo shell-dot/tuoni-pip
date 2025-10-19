@@ -19,6 +19,8 @@ from tuoni.TuoniDataHost import *
 from tuoni.TuoniDataService import *
 from tuoni.TuoniDataCredential import *
 from tuoni.TuoniJob import *
+from tuoni.TuoniCommandPlugin import *
+from tuoni.TuoniCommandTemplate import *
 
 
 class TuoniC2:
@@ -59,7 +61,7 @@ class TuoniC2:
         }
 
         response = requests.post(f"{url}/api/v1/auth/login", headers=headers, verify=self._verify)
-        if response.status_code != 200:
+        if response.status_code < 200 and response.status_code >= 300:
             raise ExceptionTuoniAuthentication(response.text)
         self._token = response.text
         self._url = url
@@ -94,7 +96,7 @@ class TuoniC2:
         self._request_check()
         headers = {"Authorization": f"Bearer {self._token}"}
         response = requests.request(method, f"{self._url}{uri}", headers=headers, verify=self._verify, **kwargs)
-        if response.status_code != 200:
+        if response.status_code < 200 and response.status_code >= 300:
             self._raise_request_exception(response.text)
         return response
 
@@ -371,6 +373,41 @@ class TuoniC2:
                     original_agents.add(agent_data["guid"])
                     agent = TuoniAgent(agent_data, self)
                     threading.Thread(target=function, args=(agent,)).start()
+
+    def load_command_plugins(self):
+        """
+        Retrieve a list of command plugins.
+
+        Returns:
+            list[TuoniCommandPlugin]: A list of available command plugins.
+        """
+        plugins_data = self.request_get("/api/v1/plugins/commands")
+        return {plugin_data["identifier"]["id"]: TuoniCommandPlugin(plugin_data, self) for plugin_data in plugins_data.values()}
+    
+    def load_command_templates(self):
+        """
+        Retrieve a list of command templates.
+
+        Returns:
+            list[TuoniCommandTemplate]: A list of available command templates.
+        """
+        templates_data = self.request_get("/api/v1/command-templates")
+        return [TuoniCommandTemplate(template_data, self) for template_data in templates_data]
+    
+    def load_command_template(self, guid):
+        """
+        Retrieve a specific command template by its unique identifier.
+
+        Args:
+            guid (str): The unique identifier of the command template to retrieve.
+
+        Returns:
+            TuoniCommandTemplate: The requested command template, or None if not found.
+        """
+        template_data = self.request_get(f"/api/v1/command-templates/{guid}")
+        if template_data:
+            return TuoniCommandTemplate(template_data, self)
+        return None
 
     def load_aliases(self):
         """

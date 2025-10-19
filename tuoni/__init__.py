@@ -25,6 +25,8 @@ from .TuoniDataService import TuoniDataService
 from .TuoniDataCredential import TuoniDataCredential
 from .TuoniJob import TuoniJob
 from .TuoniEvent import TuoniEvent
+from .TuoniCommandPlugin import TuoniCommandPlugin
+from .TuoniCommandTemplate import TuoniCommandTemplate
 
 
 __all__ = [
@@ -44,6 +46,8 @@ __all__ = [
     "TuoniDataCredential",
     "TuoniJob",
     "TuoniEvent",
+    "TuoniCommandPlugin",
+    "TuoniCommandTemplate",
     
     'ExceptionTuoniAuthentication',
     'ExceptionTuoniRequestFailed',

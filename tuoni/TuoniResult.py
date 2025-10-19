@@ -34,13 +34,13 @@ class TuoniResult:
 
     def is_text(self):
         """
-        Check if the result contains typical text output (result part where name is "stdout").
+        Check if the result contains typical text output (result part where name is "stdout", "text", or "message").
 
         Returns:
             bool: True if the result is a text output, False otherwise.
         """
         for part in self.parts:
-            if part.type == "text" and part.name.lower() == "stdout":
+            if part.type == "text" and (part.name.lower() == "stdout" or part.name.lower() == "text" or part.name.lower() == "message"):
                 return True
         return False
     
@@ -76,7 +76,7 @@ class TuoniResult:
             str: The text output if available, otherwise None.
         """
         for part in self.parts:
-            if part.type == "text" and part.name.lower() == "stdout":
+            if part.type == "text" and (part.name.lower() == "stdout" or part.name.lower() == "text" or part.name.lower() == "message"):
                 return part.get_as_text()
         return None
     
