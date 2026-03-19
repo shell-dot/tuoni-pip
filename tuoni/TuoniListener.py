@@ -12,7 +12,7 @@ class TuoniListener:
         plugin (str): The plugin associated with the listener.
         configuration (dict): The configuration settings for the listener.
     """
-    
+
     def __init__(self, conf, c2):
         """
         Constructor for the listener class.
@@ -31,6 +31,8 @@ class TuoniListener:
         self.status = conf["status"]
         self.plugin = conf["plugin"]
         self.configuration = conf["configuration"]
+        self.configuration_files = conf.get("configurationFiles", {})
+
 
     def stop(self):
         """
@@ -68,7 +70,7 @@ class TuoniListener:
         data = self.c2.request_get(f"/api/v1/listeners/{self.listener_id}")
         self._load_conf(data)
 
-    def update(self,):
+    def update(self):
         """
         Update listener on the server.
         """
@@ -76,6 +78,7 @@ class TuoniListener:
             raise ExceptionTuoniDeleted("")
         req = {
             "configuration": self.configuration,
+            "configurationFiles": self.configuration_files,
             "name": self.name
         }
         self.c2.request_patch(f"/api/v1/listeners/{self.listener_id}", req)
