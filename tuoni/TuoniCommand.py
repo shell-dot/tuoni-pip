@@ -238,3 +238,11 @@ class TuoniCommand:
             TuoniCommandTemplate: The command template object, or None if the template could not be found.
         """
         return self.c2.load_command_template(self.commandTemplateId)
+
+    def stop(self):
+        """
+        Stops the command execution on the agent or if it is not yet sent then cancel it.
+        """
+        if self.command_id is None:
+            raise ExceptionTuoniDeleted("")
+        self.c2.request_put(f"/api/v1/commands/{self.command_id}/stop")

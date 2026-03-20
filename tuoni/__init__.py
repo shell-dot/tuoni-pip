@@ -27,6 +27,8 @@ from .TuoniJob import TuoniJob
 from .TuoniEvent import TuoniEvent
 from .TuoniCommandPlugin import TuoniCommandPlugin
 from .TuoniCommandTemplate import TuoniCommandTemplate
+from .TuoniPayload import TuoniPayload
+from .TuoniPayloadTemplate import TuoniPayloadTemplate
 
 
 __all__ = [
@@ -48,7 +50,8 @@ __all__ = [
     "TuoniEvent",
     "TuoniCommandPlugin",
     "TuoniCommandTemplate",
-    
+    "TuoniPayload",
+    "TuoniPayloadTemplate",
     'ExceptionTuoniAuthentication',
     'ExceptionTuoniRequestFailed',
     'ExceptionTuoniDeleted',
@@ -88,5 +91,21 @@ __all__ = [
     'TuoniCommandJumpWinrm',
     'TuoniCommandJumpWmi',
     'TuoniCommandJumpSsh',
-    'TuoniCommandReverseShellCommunication'
+    'TuoniCommandReverseShellCommunication',
+
+    'TuoniCommandChmod',
+    'TuoniCommandSh',
+    'TuoniCommandAmsibypass',
+    'TuoniCommandEnvvarset',
+    'TuoniCommandEnvvarunset',
+    'TuoniCommandKeylogger',
+    'TuoniCommandKill',
+    'TuoniCommandLoaddll',
+    'TuoniCommandLoadelf',
+    'TuoniCommandLoadpe',
+    'TuoniCommandMemorylayout',
+    'TuoniCommandMimikatz',
+    'TuoniCommandScreentracker',
+    'TuoniCommandSuspend',
+    'TuoniCommandWebcam'
 ]

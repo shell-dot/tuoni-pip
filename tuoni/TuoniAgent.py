@@ -221,3 +221,11 @@ class TuoniAgent:
         """
         self.metadata['customProperties'][name] = value
         self.c2.request_put(f"/api/v1/agents/{self.guid}/metadata", self.metadata)
+
+    def clear_queue(self):
+        """
+        Clears the agent's command queue.
+        """
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        self.c2.request_post(f"/api/v1/agents/{self.guid}/commands/queue/clear")

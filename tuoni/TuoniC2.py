@@ -300,6 +300,16 @@ class TuoniC2:
         """
         self.request_get_file(f"/api/v1/payloads/{payload_id}/download", file_name)
 
+    def rename_payload(self, payload_id: int, new_name: str):
+        """
+        Rename a payload.
+
+        Args:
+            payload_id (int): The unique ID of the payload to rename.
+            new_name (str): The new name for the payload.
+        """
+        self.request_patch(f"/api/v1/payloads/{payload_id}", {"name": new_name})
+
     def load_agents(self, active = True, unactive = False):
         """
         Retrieve a list of agents.

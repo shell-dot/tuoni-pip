@@ -147,9 +147,18 @@ class TuoniCommandRun(TuoniDefaultPluginCommand):
         super().__init__("run", {"cmdline": cmdline, "output": output, "stdin": stdin, "unicode": unicode, "outputEncoding": outputEncoding})
 
 
+class TuoniCommandRunas(TuoniDefaultPluginCommand):
+    """
+    Default command type "runas" helper class
+    """
+    _class_base_type = "run"
+    def __init__(self, cmdline, username, password, output = True, stdin = None, unicode = None, outputEncoding = None):
+        super().__init__("run", {"cmdline": cmdline, "username": username, "password": password, "output": output, "stdin": stdin, "unicode": unicode, "outputEncoding": outputEncoding})
+
+
 class TuoniCommandPowershell(TuoniDefaultPluginCommand):
     """
-    Default command type "powerhsell" helper class
+    Default command type "powershell" helper class
     """
     _class_base_type = "powershell"
     def __init__(self, command = None, stdin = None, outputEncoding = None):
@@ -187,11 +196,11 @@ class TuoniCommandTokenDeleteAll(TuoniDefaultPluginCommand):
 
 class TuoniCommandTokenDelete(TuoniDefaultPluginCommand):
     """
-    Default command type "token-add" helper class
+    Default command type "token-del" helper class
     """
-    _class_base_type = "token-add"
+    _class_base_type = "token-del"
     def __init__(self, nr):
-        super().__init__("token-add", {"nr": nr})
+        super().__init__("token-del", {"nr": nr})
 
 
 class TuoniCommandTokenList(TuoniDefaultPluginCommand):
@@ -221,6 +230,15 @@ class TuoniCommandTokenUse(TuoniDefaultPluginCommand):
         super().__init__("token-use", {"nr": nr})
 
 
+class TuoniCommandTokenFromHandle(TuoniDefaultPluginCommand):
+    """
+    Default command type "token-from-handle" helper class
+    """
+    _class_base_type = "token-from-handle"
+    def __init__(self, handle):
+        super().__init__("token-from-handle", {"handle": handle})
+
+
 #########################
 ## Plugin FS commands
 #########################
@@ -233,6 +251,13 @@ class TuoniCommandRm(TuoniDefaultPluginCommand):
     def __init__(self, filepath, execution_conf = None):
         super().__init__("rm", {"filepath": filepath}, execution_conf)
 
+class TuoniCommandRmdir(TuoniDefaultPluginCommand):
+    """
+    Default command type "rmdir" helper class
+    """
+    _class_base_type = "rmdir"
+    def __init__(self, dirpath, execution_conf = None):
+        super().__init__("rmdir", {"dirpath": dirpath}, execution_conf)
 
 class TuoniCommandDownload(TuoniDefaultPluginCommand):
     """
@@ -300,6 +325,24 @@ class TuoniCommandConnectTcp(TuoniDefaultPluginCommand):
     _class_base_type = "connect-tcp"
     def __init__(self, host, port, execution_conf = None):
         super().__init__("connect-tcp", {"host": host, "port": port}, execution_conf)
+
+
+class TuoniCommandConnectSmb(TuoniDefaultPluginCommand):
+    """
+    Default command type "connect-smb" helper class
+    """
+    _class_base_type = "connect-smb"
+    def __init__(self, host, pipename, execution_conf = None):
+        super().__init__("connect-smb", {"host": host, "pipename": pipename}, execution_conf)
+
+
+class TuoniCommandConnectRportfwd(TuoniDefaultPluginCommand):
+    """
+    Default command type "rportfwd" helper class
+    """
+    _class_base_type = "rportfwd"
+    def __init__(self, bindPort, forwardHost, forwardPort, bindIp = None, execution_conf = None):
+        super().__init__("rportfwd", {"bindPort": bindPort, "forwardHost": forwardHost, "forwardPort": forwardPort, "bindIp": bindIp}, execution_conf)
 
 #########################
 ## Plugin OS commands
@@ -399,3 +442,136 @@ class TuoniCommandReverseShellCommunication(TuoniDefaultCommand):
     def __init__(self, input):
         super().__init__("reverse-shell-communication", {"input": input})
         
+
+#########################
+## Commercial native commands
+#########################
+class TuoniCommandChmod(TuoniDefaultCommand):
+    """
+    Commercial command type "chmod" helper class
+    """
+    _class_base_type = "chmod"
+    def __init__(self, path, access):
+        super().__init__("chmod", {"path": path, "access": access})
+
+class TuoniCommandSh(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "sh" helper class
+    """
+    _class_base_type = "sh"
+    def __init__(self, command, stdin = None):
+        super().__init__("sh", {"command": command, "stdin": stdin})
+
+#########################
+## Commercial plugin commands
+#########################
+
+class TuoniCommandAmsibypass(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "amsi-bypass" helper class
+    """
+    _class_base_type = "amsi-bypass"
+    def __init__(self, execution_conf = None):
+        super().__init__("amsi-bypass", {}, execution_conf)
+
+class TuoniCommandEnvvarset(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "env-var-set" helper class
+    """
+    _class_base_type = "env-var-set"
+    def __init__(self, name, value, envVarScope, execution_conf = None):
+        super().__init__("env-var-set", {"name": name, "value": value, "envVarScope": envVarScope}, execution_conf)
+
+class TuoniCommandEnvvarunset(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "env-var-unset" helper class
+    """
+    _class_base_type = "env-var-unset"
+    def __init__(self, name, envVarScope, execution_conf = None):
+        super().__init__("env-var-unset", {"name": name, "envVarScope": envVarScope}, execution_conf)
+
+class TuoniCommandKeylogger(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "keylogger" helper class
+    """
+    _class_base_type = "keylogger"
+    def __init__(self, execution_conf = None):
+        super().__init__("keylogger", {}, execution_conf)
+
+class TuoniCommandKill(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "kill" helper class
+    """
+    _class_base_type = "kill"
+    def __init__(self, pid, execution_conf = None):
+        super().__init__("kill", {"pid": pid}, execution_conf)
+
+class TuoniCommandLoaddll(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "load-dll" helper class
+    """
+    _class_base_type = "load-dll"
+    def __init__(self, methodName, localDllPath = None, parameterTypes = None, parameterValues = None, returnType = None, dll = None, execution_conf = None):
+        super().__init__("load-dll", {"localDllPath": localDllPath, "methodName": methodName, "parameterTypes": parameterTypes, "parameterValues": parameterValues, "returnType": returnType}, execution_conf)
+        if dll is not None:
+            self.files = {"dll": ["filename.dll", dll]}
+
+class TuoniCommandLoadelf(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "load-elf" helper class
+    """
+    _class_base_type = "load-elf"
+    def __init__(self, localExecutable = None, commandline = None, maxWaitTime = None, executable = None, execution_conf = None):
+        super().__init__("load-elf", {"localExecutable": localExecutable, "commandline": commandline, "maxWaitTime": maxWaitTime}, execution_conf)
+        if executable is not None:
+            self.files = {"executable": ["executable", executable]}
+
+class TuoniCommandLoadpe(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "load-pe" helper class
+    """
+    _class_base_type = "load-pe"
+    def __init__(self, localExecutable = None, commandline = None, imageName = None, maxWaitTime = None, executable = None, execution_conf = None):
+        super().__init__("load-pe", {"localExecutable": localExecutable, "commandline": commandline, "imageName": imageName, "maxWaitTime": maxWaitTime}, execution_conf)
+        if executable is not None:
+            self.files = {"executable": ["executable.exe", executable]}
+
+class TuoniCommandMemorylayout(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "memory-layout" helper class
+    """
+    _class_base_type = "memory-layout"
+    def __init__(self, pid = None, execution_conf = None):
+        super().__init__("memory-layout", {"pid": pid}, execution_conf)
+
+class TuoniCommandMimikatz(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "mimikatz" helper class
+    """
+    _class_base_type = "mimikatz"
+    def __init__(self, command, execution_conf = None):
+        super().__init__("mimikatz", {"command": command}, execution_conf)
+
+class TuoniCommandScreentracker(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "screen-tracker" helper class
+    """
+    _class_base_type = "screen-tracker"
+    def __init__(self, interval = None, timeout = None, difference = None, difference_pixels = None, execution_conf = None):
+        super().__init__("screen-tracker", {"interval": interval, "timeout": timeout, "difference": difference, "difference_pixels": difference_pixels}, execution_conf)
+
+class TuoniCommandSuspend(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "suspend" helper class
+    """
+    _class_base_type = "suspend"
+    def __init__(self, pid, execution_conf = None):
+        super().__init__("suspend", {"pid": pid}, execution_conf)
+
+class TuoniCommandWebcam(TuoniDefaultPluginCommand):
+    """
+    Commercial command type "webcam" helper class
+    """
+    _class_base_type = "webcam"
+    def __init__(self, deviceNr = 0, execution_conf = None):
+        super().__init__("webcam", {"deviceNr": deviceNr}, execution_conf)

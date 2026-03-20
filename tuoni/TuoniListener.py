@@ -31,7 +31,7 @@ class TuoniListener:
         self.status = conf["status"]
         self.plugin = conf["plugin"]
         self.configuration = conf["configuration"]
-        self.configuration_files = conf.get("configurationFiles", {})
+        self.configuration_files = conf.get("configurationFiles", [])
 
 
     def stop(self):
