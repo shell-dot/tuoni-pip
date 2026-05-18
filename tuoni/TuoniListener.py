@@ -73,14 +73,20 @@ class TuoniListener:
     def update(self):
         """
         Update listener on the server.
+
+        Sends the current ``name`` and ``configuration``. ``configurationFiles`` is
+        only sent when explicitly set on this object, because the server treats a
+        present (even empty) list as "replace all" — and ``ListenerResponse`` does
+        not echo the field, so a naive round-trip would wipe server-side files.
         """
         if self.listener_id is None:
             raise ExceptionTuoniDeleted("")
         req = {
             "configuration": self.configuration,
-            "configurationFiles": self.configuration_files,
-            "name": self.name
+            "name": self.name,
         }
+        if self.configuration_files:
+            req["configurationFiles"] = self.configuration_files
         self.c2.request_patch(f"/api/v1/listeners/{self.listener_id}", req)
         self.reload()
 

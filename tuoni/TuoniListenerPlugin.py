@@ -1,3 +1,4 @@
+import copy
 import random
 from tuoni.TuoniListener import *
 
@@ -71,15 +72,18 @@ class TuoniListenerPlugin:
         listener_obj = TuoniListener(listener_data, self.c2)
         return listener_obj
 
-    def get_default_conf(self):    
+    def get_default_conf(self):
         """
         Retrieve the default configuration for the listener plugin.
+
+        Returns a fresh deep copy so callers can safely mutate the result without
+        affecting the cached example or subsequent calls.
 
         Returns:
             dict: The default configuration settings, or an empty dictionary if none are defined.
         """
         if "default" in self.conf_examples:
-            return self.conf_examples["default"]
+            return copy.deepcopy(self.conf_examples["default"])
         return {}  #Might change but let's say for now that if no "default" conf then empty conf is same
 
     def get_minimal_conf(self):

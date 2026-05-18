@@ -1,3 +1,4 @@
+import base64
 import json
 from tuoni.TuoniExceptions import *
 
@@ -7,13 +8,15 @@ class TuoniResultPart:
     A class that provides data and functionality for a part of a command result.
 
     Attributes:
-        type (str): The type of the result part.
+        type (str): The type of the result part (``"text"``, ``"file"``, ``"binary"``, ``"omitted"``).
         name (str): The name of the result part.
-        value (str): The value associated with the result part.
+        value (str | bytes): For ``text`` parts the string value; for ``binary`` parts the raw bytes.
         filename (str): The filename of any file included in the result part.
         uri (str): The URI for accessing the file in the result part.
+        realType (str): For ``omitted`` parts, the type that was suppressed.
+        size (str): For ``omitted`` parts, the human-readable size reported by the server.
     """
-    
+
     def __init__(self, conf, c2):
         """
         Constructor for the result part class.
@@ -30,7 +33,7 @@ class TuoniResultPart:
         if self.type == "text":
             self.name = conf["name"]
             self.value = conf["value"]
-        if self.type == "file":
+        elif self.type == "file":
             self.filename = conf["filename"]
             self.href = conf["href"]
             if "//" in self.href:
@@ -38,6 +41,19 @@ class TuoniResultPart:
                 self.uri = self.uri[self.uri.find("/"):]
             else:
                 self.uri = self.href
+        elif self.type == "binary":
+            self.name = conf["name"]
+            raw = conf.get("result")
+            if isinstance(raw, str):
+                self.value = base64.b64decode(raw)
+            elif isinstance(raw, (bytes, bytearray)):
+                self.value = bytes(raw)
+            else:
+                self.value = b""
+        elif self.type == "omitted":
+            self.name = conf["name"]
+            self.realType = conf.get("realType")
+            self.size = conf.get("size")
 
     def get_as_text(self):
         """
@@ -50,6 +66,11 @@ class TuoniResultPart:
             return self.value
         if self.type == "file":
             return self.c2.request_get(self.uri, result_as_json=False)
+        if self.type == "binary":
+            try:
+                return self.value.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
         return None
 
     def get_as_file(self, filename):
@@ -61,16 +82,22 @@ class TuoniResultPart:
         """
         if self.type == "file":
             self.c2.request_get_file(self.uri, filename)
+            return None
+        if self.type == "binary":
+            with open(filename, "wb") as f:
+                f.write(self.value)
         return None
 
     def get_as_bytes(self):
         """
         Retrieve the value of the result part as bytes.
-        """        
+        """
         if self.type == "file":
             return self.c2.request_get(self.uri, result_as_json=False, result_as_bytes=True)
         if self.type == "text":
             return self.value.encode('utf-8')
+        if self.type == "binary":
+            return self.value
         return None
 
     def get_as_json(self):
@@ -84,4 +111,6 @@ class TuoniResultPart:
             return json.loads(self.value)
         if self.type == "file":
             return json.loads(self.c2.request_get(self.uri, result_as_json=False))
+        if self.type == "binary":
+            return json.loads(self.value.decode("utf-8"))
         return None

@@ -37,6 +37,7 @@ class TuoniAgent:
         self.last_callback_time = conf["lastCallbackTime"]
         self.metadata = conf["metadata"]
         self.active = conf["active"]
+        self.status = conf.get("status", None)
         self.recentListeners = conf["recentListeners"]
         self._fill_available_commands(conf["availableCommandTemplates"])
 
@@ -75,9 +76,12 @@ class TuoniAgent:
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
         if isinstance(command_type, TuoniDefaultCommand):
-            command_conf = command_type.command_conf
-            execution_conf = command_type.execution_conf
-            files = command_type.files
+            if command_conf is None:
+                command_conf = command_type.command_conf
+            if execution_conf is None:
+                execution_conf = command_type.execution_conf
+            if files is None:
+                files = command_type.files
             command_type = command_type.command_type
         if isinstance(command_type, TuoniCommandTemplate):
             command_type = command_type.id
@@ -111,6 +115,15 @@ class TuoniAgent:
             commands.append(command_obj)
         return commands
 
+    def reload(self):
+        """
+        Reload the agent data from the C2 server.
+        """
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        data = self.c2.request_get(f"/api/v1/agents/{self.guid}")
+        self._load_conf(data)
+
     def delete(self):
         """
         Deletes agent (actually makes it inactive but close enough).
@@ -118,8 +131,58 @@ class TuoniAgent:
         if self.guid is None:
             raise ExceptionTuoniDeleted("")
         self.c2.request_put(f"/api/v1/agents/{self.guid}/inactive")
-        self.listener_id = None
-        
+        self.guid = None
+
+    def block(self):
+        """
+        Block the agent, preventing it from communicating with the server.
+
+        Examples:
+            >>> agent.block()
+            >>> agent.reload()
+            >>> print(agent.status)  # "BLOCKED"
+        """
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        self.c2.request_put(f"/api/v1/agents/{self.guid}/block")
+        self.status = "BLOCKED"
+        self.active = False
+
+    def restore(self):
+        """
+        Restore a blocked agent, allowing it to communicate again.
+
+        Examples:
+            >>> agent.restore()
+            >>> agent.reload()
+            >>> print(agent.status)  # "ACTIVE"
+        """
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        self.c2.request_put(f"/api/v1/agents/{self.guid}/restore")
+        self.status = "ACTIVE"
+        self.active = True
+
+    def load_command_templates(self):
+        """
+        Retrieve the command templates available for this specific agent.
+
+        Returns:
+            list[TuoniCommandTemplate]: Templates scoped to this agent (global +
+            listener-scoped + agent-scoped).
+
+        Examples:
+            >>> templates = agent.load_command_templates()
+            >>> for t in templates:
+            >>>     print(t.name)
+        """
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        templates_data = self.c2.request_get(f"/api/v1/agents/{self.guid}/command-templates")
+        if templates_data is None:
+            return []
+        return [TuoniCommandTemplate(t, self.c2) for t in templates_data]
+
     def _fill_available_commands(self, command_list):
         self.availableCommands = {}
         for cmd in self.c2.request_get("/api/v1/command-templates"):
@@ -167,11 +230,9 @@ class TuoniAgent:
                         return False
                 else:
                     if current_obj != expected_value:
-                        print(f"{Fore.YELLOW}Debug: Value mismatch for '{key}': got '{current_obj}', expected '{expected_value}'{Style.RESET_ALL}")
                         return False
-                        
-            except (AttributeError, TypeError) as e:
-                print(f"{Fore.YELLOW}Debug: Exception accessing '{key}': {e}{Style.RESET_ALL}")
+
+            except (AttributeError, TypeError):
                 return False
         
         # All criteria matched
@@ -219,8 +280,24 @@ class TuoniAgent:
         Example:
             myAgent.set_custom_property("notes", "Domain Controller")
         """
-        self.metadata['customProperties'][name] = value
-        self.c2.request_put(f"/api/v1/agents/{self.guid}/metadata", self.metadata)
+        if self.guid is None:
+            raise ExceptionTuoniDeleted("")
+        # The server merges incoming customProperties into the existing map and
+        # strips null-valued entries, so we only need to send the delta and the
+        # delete signal is an explicit null.
+        updated = self.c2.request_put(
+            f"/api/v1/agents/{self.guid}/metadata",
+            {"customProperties": {name: value}},
+        )
+        if isinstance(updated, dict):
+            self.metadata = updated
+        else:
+            cp = dict(self.metadata.get("customProperties") or {})
+            if value is None:
+                cp.pop(name, None)
+            else:
+                cp[name] = value
+            self.metadata["customProperties"] = cp
 
     def clear_queue(self):
         """

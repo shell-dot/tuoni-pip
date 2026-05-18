@@ -1,7 +1,3 @@
-import random
-from tuoni.TuoniListener import *
-
-
 class TuoniPayloadTemplate:
     """
     A class that provides data and functionality for a payload template.
@@ -15,7 +11,7 @@ class TuoniPayloadTemplate:
         plugin_id (str): The unique identifier of the payload plugin.
         example_configurations (list[dict]): A list of example configurations for the payload template.
         conf_schema (dict): The configuration schema for the payload template.
-        available_listeners (list[TuoniListener]): A list of available listeners that can be used with this payload template.
+        available_listener_ids (list[int]): IDs of listeners that can be used with this payload template. Use ``TuoniC2.load_listener(id)`` (or your own listener cache) to hydrate them when needed.
 
     Examples:
         Inspect a template's configuration schema and create a payload for each
@@ -62,10 +58,7 @@ class TuoniPayloadTemplate:
         self.plugin_id = conf["pluginId"]
         self.example_configurations = conf["exampleConfigurations"]
         self.conf_schema = conf["configurationSchema"]
-        self.available_listeners = []
-        if "availableListeners" in conf:
-            for listener in conf["availableListeners"]:
-                self.available_listeners.append(TuoniListener(listener, c2))
+        self.available_listener_ids = list(conf.get("availableListenerIds", []))
         self.c2 = c2
 
 

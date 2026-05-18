@@ -7,11 +7,13 @@ import shutil
 import base64
 import inspect
 from pathlib import Path
+from urllib.parse import quote
 from tuoni.TuoniExceptions import *
 from tuoni.TuoniListenerPlugin import *
 from tuoni.TuoniListener import *
 from tuoni.TuoniAgent import *
 from tuoni.TuoniPayloadPlugin import *
+from tuoni.TuoniPayload import *
 from tuoni.TuoniAlias import *
 from tuoni.TuoniUser import *
 from tuoni.TuoniFile import *
@@ -206,6 +208,24 @@ class TuoniC2:
         response = self._make_request("PUT", uri, json=json_data)
         return json.loads(response.text) if response.text else None
 
+    def request_put_multipart(self, uri: str, files: dict):
+        """
+        Send a PUT request with multipart/form-data to the Tuoni server.
+
+        Args:
+            uri (str): The URI endpoint to send the request to.
+            files (dict): A dictionary of files to upload. Each key is the form field name
+                and the value is a list of [filename, file_content].
+
+        Returns:
+            dict: The server's response as a dictionary, or None.
+        """
+        all_data = {}
+        for var_name, file_info in files.items():
+            all_data[var_name] = (file_info[0], file_info[1], "application/octet-stream")
+        response = self._make_request("PUT", uri, files=all_data)
+        return json.loads(response.text) if response.text else None
+
     def request_delete(self, uri: str, json_data: dict = None):
         """
         Send a DELETE request to the Tuoni server.
@@ -271,7 +291,7 @@ class TuoniC2:
             payload_name (str): The name to assign to the payload.
 
         Returns:
-            id: The unique ID of the created payload.
+            int: The unique ID of the created payload.
 
         Examples:
             >>> payload_id = tuoni_server.create_payload(
@@ -309,6 +329,44 @@ class TuoniC2:
             new_name (str): The new name for the payload.
         """
         self.request_patch(f"/api/v1/payloads/{payload_id}", {"name": new_name})
+
+    def load_payloads(self, include_non_active: bool = False):
+        """
+        Retrieve a list of payloads.
+
+        Args:
+            include_non_active (bool): If True, archived and unavailable payloads are included.
+
+        Returns:
+            list[TuoniPayload]: A list of payloads.
+
+        Examples:
+            >>> payloads = tuoni_server.load_payloads()
+            >>> for p in payloads:
+            >>>     print(p.payload_id, p.name)
+        """
+        param = "true" if include_non_active else "false"
+        payloads_data = self.request_get(f"/api/v1/payloads?includeNonActive={param}")
+        if payloads_data is None:
+            return []
+        return [TuoniPayload(p, self) for p in payloads_data]
+
+    def load_payload(self, payload_id: int):
+        """
+        Retrieve a single payload by its ID.
+
+        Args:
+            payload_id (int): The unique ID of the payload.
+
+        Returns:
+            TuoniPayload: The requested payload.
+
+        Examples:
+            >>> payload = tuoni_server.load_payload(42)
+            >>> print(payload.status)
+        """
+        payload_data = self.request_get(f"/api/v1/payloads/{payload_id}")
+        return TuoniPayload(payload_data, self)
 
     def load_agents(self, active = True, unactive = False):
         """
@@ -429,7 +487,7 @@ class TuoniC2:
         all_aliases = self.request_get("/api/v1/command-alias")
         return [TuoniAlias(alias_data, self) for alias_data in all_aliases]
 
-    def add_alias(self, name, description, command_type, command_conf={}, files = None):
+    def add_alias(self, name, description, command_type, command_conf=None, files = None):
         """
         Add a new alias.
 
@@ -487,11 +545,15 @@ class TuoniC2:
             >>> )
         """
         if isinstance(command_type, TuoniDefaultCommand):
-            command_conf = command_type.command_conf
-            files = command_type.files
+            if command_conf is None:
+                command_conf = command_type.command_conf
+            if files is None:
+                files = command_type.files
             command_type = command_type.command_type
         if inspect.isclass(command_type) and issubclass(command_type, TuoniDefaultCommand):
             command_type = command_type._class_base_type
+        if command_conf is None:
+            command_conf = {}
 
         json_data = {
             "name": name,
@@ -511,6 +573,36 @@ class TuoniC2:
         """
         all_files = self.request_get("/api/v1/files")
         return [TuoniFile(file_data, self) for file_data in all_files]
+
+    def load_hosted_by_path(self, path: str):
+        """
+        Retrieve a hosted file by its path.
+
+        Args:
+            path (str): The hosted path of the file (e.g. ``/somedir/file.txt``).
+
+        Returns:
+            TuoniFile: The hosted file.
+
+        Examples:
+            >>> f = tuoni_server.load_hosted_by_path("/payloads/agent.exe")
+        """
+        encoded = quote(path.lstrip("/"), safe="/")
+        file_data = self.request_get(f"/api/v1/file/by-path/{encoded}")
+        return TuoniFile(file_data, self)
+
+    def delete_hosted_by_path(self, path: str):
+        """
+        Delete a hosted file by its path.
+
+        Args:
+            path (str): The hosted path of the file (e.g. ``/somedir/file.txt``).
+
+        Examples:
+            >>> tuoni_server.delete_hosted_by_path("/payloads/agent.exe")
+        """
+        encoded = quote(path.lstrip("/"), safe="/")
+        self.request_delete(f"/api/v1/files/{encoded}")
 
     def add_hosted(self, filename, file_content, original_filename = None):
         """
@@ -742,8 +834,8 @@ class TuoniC2:
         Retrieve a list of jobs.
 
         Args:
-            page (int): Page of the result.
-            pageSize (int): How many results per page.
+            page (int): Page of the result (only used when ``inactives=True``).
+            pageSize (int): How many results per page (only used when ``inactives=True``).
             sort_col (str): Based of what field to sort
             sort_order (str): Order of sort
             inactives (bool): Should also inactive jobs be returned
@@ -752,12 +844,104 @@ class TuoniC2:
         Returns:
             list[TuoniJob]: A list of jobs.
         """
-        sort_col = "&" + sort_col + ":" + sort_order
-        urlEnd = "all" if inactives else "active"
-        all_jobs = self.request_get(f"/api/v1/jobs/{urlEnd}?page={page}&pageSize={pageSize}{sort_col}")
-        if "items" in all_jobs:
-            return [TuoniJob(job_data, self) for job_data in all_jobs["items"]]
-        return []
+        sort_param = f"sort={sort_col}:{sort_order}"
+        if inactives:
+            all_jobs = self.request_get(f"/api/v1/jobs/all?page={page}&pageSize={pageSize}&{sort_param}")
+            if all_jobs is None:
+                return []
+            if isinstance(all_jobs, dict) and "items" in all_jobs:
+                return [TuoniJob(job_data, self) for job_data in all_jobs["items"]]
+            return []
+        active_jobs = self.request_get(f"/api/v1/jobs/active?{sort_param}")
+        if active_jobs is None:
+            return []
+        return [TuoniJob(job_data, self) for job_data in active_jobs]
+
+    def load_settings(self):
+        """
+        Retrieve all server settings.
+
+        Returns:
+            dict: A dict with ``server`` and ``plugin`` keys, each containing setting objects.
+
+        Examples:
+            >>> settings = tuoni_server.load_settings()
+            >>> for key, s in settings["server"].items():
+            >>>     print(key, s["currentValue"])
+        """
+        return self.request_get("/api/v1/settings")
+
+    def update_settings(self, settings: dict):
+        """
+        Update multiple server settings at once.
+
+        Args:
+            settings (dict): A mapping of setting key to new value. Follows the same
+                structure as ``AllSettingsUpdateRequest`` on the server.
+
+        Returns:
+            dict: The updated settings.
+        """
+        return self.request_patch("/api/v1/settings", settings)
+
+    def load_setting(self, key: str):
+        """
+        Retrieve a single server setting by key.
+
+        Args:
+            key (str): The setting key.
+
+        Returns:
+            dict: The setting object including ``currentValue``, ``defaultValue``, ``type``, etc.
+
+        Examples:
+            >>> s = tuoni_server.load_setting("tuoni.websocket.command-result-max-size")
+            >>> print(s["currentValue"])
+        """
+        return self.request_get(f"/api/v1/setting/{key}")
+
+    def update_setting(self, key: str, value):
+        """
+        Update a single server setting.
+
+        Args:
+            key (str): The setting key.
+            value: The new value for the setting (must be JSON-serialisable).
+
+        Returns:
+            dict: The updated setting object.
+
+        Examples:
+            >>> tuoni_server.update_setting("tuoni.agent.default-sleep", 5)
+        """
+        return self.request_put(f"/api/v1/setting/{key}", {"value": value})
+
+    def connect_websocket(self, timeout: float = 10):
+        """
+        Connect to the Tuoni server's real-time WebSocket endpoint.
+
+        Requires the ``websocket-client`` package (``pip install websocket-client``).
+
+        Args:
+            timeout (float): Seconds to wait for the STOMP handshake to complete.
+
+        Returns:
+            TuoniWebSocket: A connected WebSocket client ready for subscriptions.
+
+        Raises:
+            Exception: If the connection cannot be established within ``timeout`` seconds.
+
+        Examples:
+            >>> ws = tuoni_server.connect_websocket()
+            >>> results = []
+            >>> ws.on_command_result(lambda data: results.append(data))
+        """
+        from tuoni.TuoniWebSocket import TuoniWebSocket
+        ws = TuoniWebSocket(self)
+        connected = ws.connect(timeout=timeout)
+        if not connected:
+            raise Exception("Failed to connect to Tuoni WebSocket within timeout")
+        return ws
 
     def let_it_run(self):
         """

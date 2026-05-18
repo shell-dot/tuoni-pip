@@ -47,8 +47,29 @@ class TuoniFile:
         """
         if self.fileId is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_delete(f"/api/v1/file/{self.fileId}")
-        self._load_conf(data)
+        self.c2.request_delete(f"/api/v1/file/{self.fileId}")
+        self.fileId = None
+
+    def replace(self, file_content: bytes, original_filename: str = None):
+        """
+        Replace the content of this hosted file with new bytes.
+
+        Args:
+            file_content (bytes): The new file content.
+            original_filename (str): Optional filename to use; defaults to the
+                current ``originalFileName``.
+
+        Examples:
+            >>> f.replace(b"updated content")
+        """
+        if self.fileId is None:
+            raise ExceptionTuoniDeleted("")
+        if original_filename is None:
+            original_filename = self.originalFileName
+        self.c2.request_put_multipart(
+            f"/api/v1/file/{self.fileId}",
+            {"content": [original_filename, file_content]},
+        )
 
     def download(self, filename):
         return self.c2.request_get_file(self.downloadHref, filename)

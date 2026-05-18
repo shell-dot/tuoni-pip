@@ -1,3 +1,4 @@
+import copy
 import random
 from tuoni.TuoniListener import *
 
@@ -46,11 +47,14 @@ class TuoniCommandTemplate:
         """
         Retrieve the default configuration for the command template.
 
+        Returns a fresh deep copy so callers can safely mutate the result without
+        affecting the cached example or subsequent calls.
+
         Returns:
             dict: The default configuration settings, or an empty dictionary if none are defined.
         """
         if "default" in self.conf_examples:
-            return self.conf_examples["default"]
+            return copy.deepcopy(self.conf_examples["default"])
         return {}  # Might change but let's say for now that if no "default" conf then empty conf is same
 
     def get_minimal_conf(self):

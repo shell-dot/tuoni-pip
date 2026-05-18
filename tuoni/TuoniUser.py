@@ -31,7 +31,7 @@ class TuoniUser:
         """
         Reload the user data from the C2 server.
         """
-        if self.alias_id is None:
+        if self.username is None:
             raise ExceptionTuoniDeleted("")
         data = self.c2.request_get(f"/api/v1/users/{self.username}")
         self._load_conf(data)

@@ -34,7 +34,7 @@ class TuoniEvent:
         """
         Reload the command data from the C2 server.
         """
-        if self.command_id is None:
+        if self.event_id is None:
             raise ExceptionTuoniDeleted("")
         data = self.c2.request_get(f"/api/v1/event/{self.event_id}")
         self._load_conf(data)

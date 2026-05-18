@@ -79,6 +79,15 @@ class TuoniPayload:
         data = self.c2.request_get(f"/api/v1/payloads/{id}")
         self._load_conf(data)
 
+    def reload(self):
+        """
+        Reload the payload data from the C2 server.
+        """
+        if self.payload_id is None:
+            raise Exception("Payload not created.")
+        data = self.c2.request_get(f"/api/v1/payloads/{self.payload_id}")
+        self._load_conf(data)
+
     def create(self, listener_id):
         """
         Create the payload on the C2 server.

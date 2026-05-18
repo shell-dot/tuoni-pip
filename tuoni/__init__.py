@@ -29,6 +29,7 @@ from .TuoniCommandPlugin import TuoniCommandPlugin
 from .TuoniCommandTemplate import TuoniCommandTemplate
 from .TuoniPayload import TuoniPayload
 from .TuoniPayloadTemplate import TuoniPayloadTemplate
+from .TuoniWebSocket import TuoniWebSocket
 
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "TuoniCommandTemplate",
     "TuoniPayload",
     "TuoniPayloadTemplate",
+    "TuoniWebSocket",
     'ExceptionTuoniAuthentication',
     'ExceptionTuoniRequestFailed',
     'ExceptionTuoniDeleted',
@@ -66,6 +68,7 @@ __all__ = [
     'TuoniCommandJobs',
     'TuoniCommandProclist',
     'TuoniCommandRun',
+    'TuoniCommandRunas',
     'TuoniCommandPowershell',
     'TuoniCommandSleep',
     'TuoniCommandTokenSteal',
@@ -74,7 +77,9 @@ __all__ = [
     'TuoniCommandTokenList',
     'TuoniCommandTokenMake',
     'TuoniCommandTokenUse',
+    'TuoniCommandTokenFromHandle',
     'TuoniCommandRm',
+    'TuoniCommandRmdir',
     'TuoniCommandDownload',
     'TuoniCommandUpload',
     'TuoniCommandCp',
@@ -82,6 +87,8 @@ __all__ = [
     'TuoniCommandMkdir',
     'TuoniCommandSocks5',
     'TuoniCommandConnectTcp',
+    'TuoniCommandConnectSmb',
+    'TuoniCommandConnectRportfwd',
     'TuoniCommandexecuteAssembly',
     'TuoniCommandInject',
     'TuoniCommandProcinfo',

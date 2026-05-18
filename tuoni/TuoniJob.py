@@ -27,8 +27,8 @@ class TuoniJob:
             conf (dict): Data from the server.
             c2 (TuoniC2): The related server object that manages communication.
         """
-        self._load_conf(conf)
         self.c2 = c2
+        self._load_conf(conf)
 
     def _load_conf(self, conf):
         self.job_id = conf["id"]
@@ -38,14 +38,14 @@ class TuoniJob:
         self.supportedActions = conf["supportedActions"]
         self.openResources = conf["openResources"]
         self.messages = conf["messages"]
-        self.createEvent = TuoniEvent(conf["createEvent"]) if (conf["createEvent"] is not None) else None
-        self.lastUpdateEvent = TuoniEvent(conf["lastUpdateEvent"]) if (conf["lastUpdateEvent"] is not None) else None
+        self.createEvent = TuoniEvent(conf["createEvent"], self.c2) if (conf.get("createEvent") is not None) else None
+        self.lastUpdateEvent = TuoniEvent(conf["lastUpdateEvent"], self.c2) if (conf.get("lastUpdateEvent") is not None) else None
 
     def reload(self):
         """
-        Reload the command data from the C2 server.
+        Reload the job data from the C2 server.
         """
-        if self.command_id is None:
+        if self.job_id is None:
             raise ExceptionTuoniDeleted("")
         data = self.c2.request_get(f"/api/v1/job/{self.job_id}")
         self._load_conf(data)
@@ -54,22 +54,22 @@ class TuoniJob:
         """
         Run restart operation on the job.
         """
-        if self.command_id is None:
+        if self.job_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get(f"/api/v1/job/{self.job_id}/restart")
+        self.c2.request_post(f"/api/v1/job/{self.job_id}/restart")
 
     def pause(self):
         """
         Run pause operation on the job.
         """
-        if self.command_id is None:
+        if self.job_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get(f"/api/v1/job/{self.job_id}/pause")
+        self.c2.request_post(f"/api/v1/job/{self.job_id}/pause")
 
     def resume(self):
         """
         Run resume operation on the job.
         """
-        if self.command_id is None:
+        if self.job_id is None:
             raise ExceptionTuoniDeleted("")
-        data = self.c2.request_get(f"/api/v1/job/{self.job_id}/resume")
+        self.c2.request_post(f"/api/v1/job/{self.job_id}/resume")
