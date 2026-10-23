@@ -1,4 +1,5 @@
 import time
+import math
 from tuoni.TuoniExceptions import *
 from tuoni.TuoniResult import *
 
@@ -13,6 +14,8 @@ class TuoniCommand:
 
     Attributes:
         command_id (int): The unique identifier of the command.
+        agentGuid (str | None): UUID of the owning agent, used by note helpers.
+            May be None on older command responses.
         commandTemplateId (str): The unique identifier of the command template used to create the command.
         commandTemplateName (str): The name of the command template used to create the command.
         configuration (dict): The configuration settings for the command.
@@ -38,6 +41,7 @@ class TuoniCommand:
 
     def _load_conf(self, conf):
         self.command_id = conf["id"]
+        self.agentGuid = conf.get("agentGuid") or getattr(self, "agentGuid", None)
         self.commandTemplateId = conf["commandTemplateId"]
         self.commandTemplateName = conf["commandTemplateName"]
         self.configuration = conf["configuration"]
@@ -56,6 +60,63 @@ class TuoniCommand:
         data = self.c2.request_get(f"/api/v1/commands/{self.command_id}")
         self._load_conf(data)
 
+    def _require_note_context(self):
+        if self.command_id is None:
+            raise ExceptionTuoniDeleted("")
+        if not self.agentGuid:
+            raise ValueError(
+                "Command has no agentGuid; use TuoniC2 command-note methods "
+                "with an explicit agent_guid"
+            )
+
+    def load_notes(self, page=0, pageSize=100, label=None, include_archived=False):
+        """Load one page of this command's notes, ordered oldest first.
+
+        Args:
+            page (int): Zero-based page number. Defaults to 0.
+            pageSize (int): Notes per page, from 1 to 1000. Defaults to 100.
+            label (str | None): Exact, case-sensitive label filter.
+            include_archived (bool): Include archived notes. Defaults to False.
+
+        Returns:
+            list[TuoniNote]: Notes in the requested page. Requires
+                ``VIEW_RESOURCES`` and a known ``agentGuid``.
+        """
+        self._require_note_context()
+        return self.c2.load_command_notes(
+            self.agentGuid, self.command_id, page=page, pageSize=pageSize,
+            label=label, include_archived=include_archived
+        )
+
+    def load_note(self, note_id):
+        """Retrieve one of this command's notes, including archived notes.
+
+        Args:
+            note_id (str): Note UUID.
+
+        Returns:
+            TuoniNote: The requested note. Requires ``VIEW_RESOURCES`` and a
+                known ``agentGuid``.
+        """
+        self._require_note_context()
+        return self.c2.load_command_note(self.agentGuid, self.command_id, note_id)
+
+    def add_note(self, label, content):
+        """Create a note on this command. Requires ``SEND_COMMANDS``.
+
+        Args:
+            label (str): Nonblank label, limited to 128 characters by the server.
+            content (str): Nonblank content, limited to 2,000 characters.
+
+        Returns:
+            TuoniNote: The created note. Requires a known ``agentGuid``.
+
+        Examples:
+            >>> note = command.add_note("review", "Reviewed the output.")
+        """
+        self._require_note_context()
+        return self.c2.add_command_note(self.agentGuid, self.command_id, label, content)
+
     def result_status_done(self, reload = True):
         """
         Check if the command has completed.
@@ -67,11 +128,7 @@ class TuoniCommand:
             raise ExceptionTuoniDeleted("")
         if reload:
             self.reload()
-        if self.result is None:
-            return False
-        if self.result["status"].lower() == "ongoing":
-            return False
-        return True
+        return self.is_done()
 
     def result_status_ongoing(self, reload = True):
         """
@@ -84,11 +141,7 @@ class TuoniCommand:
             raise ExceptionTuoniDeleted("")
         if reload:
             self.reload()
-        if self.result is None:
-            return False
-        if self.result["status"].lower() == "ongoing":
-            return True
-        return False
+        return self.is_ongoing()
 
     def get_result(self, reload = True):
         """
@@ -117,17 +170,12 @@ class TuoniCommand:
             maxWait (int): The maximum time to wait, in seconds, before giving up. A value of 0 means wait indefinitely.
 
         Returns:
-            TuoniResult: The result object containing the data from the command execution, if available within the specified time.
+            TuoniResult | None: The first result, or None on timeout or when a
+                command reaches a terminal status without producing a result.
         """
-        self.reload()
-        while self.result is None:
-            time.sleep(interval)
-            self.reload()
-            if maxWait > 0:
-                maxWait -= interval
-                if maxWait <= 0:
-                    return None
-        return TuoniResult(self.result, self.c2)
+        if self._wait_for(lambda: self.result is not None, interval, maxWait):
+            return TuoniResult(self.result, self.c2)
+        return None
 
     def wait_done(self, interval = 1, maxWait = 0):
         """
@@ -140,14 +188,8 @@ class TuoniCommand:
         Returns:
             TuoniResult: The result object containing the data from the command execution, if available within the specified time. For commands that finish without a result (e.g. canceled before send), returns ``None`` once the terminal status is reached.
         """
-        self.reload()
-        while not self.is_done():
-            time.sleep(interval)
-            self.reload()
-            if maxWait > 0:
-                maxWait -= interval
-                if maxWait <= 0:
-                    return None
+        if not self._wait_for(self.is_done, interval, maxWait):
+            return None
         return TuoniResult(self.result, self.c2) if self.result is not None else None
     
     def wait_sent(self, interval = 1, maxWait = 0):
@@ -159,16 +201,28 @@ class TuoniCommand:
             maxWait (int): The maximum time to wait, in seconds, before giving up. A value of 0 means wait indefinitely.
 
         Returns:
-            bool: Was command sent
+            bool: True if sent; False on timeout or when the command finishes
+                without being sent (including cancellation).
         """
+        return self._wait_for(lambda: self.sent is not None, interval, maxWait)
+
+    def _wait_for(self, predicate, interval, max_wait):
+        if not math.isfinite(interval) or interval <= 0:
+            raise ValueError("interval must be positive and finite")
+        if not math.isfinite(max_wait) or max_wait < 0:
+            raise ValueError("maxWait must be nonnegative and finite")
+        deadline = time.monotonic() + max_wait if max_wait else None
         self.reload()
-        while self.sent is None:
-            time.sleep(interval)
+        while not predicate():
+            if self.is_done():
+                return False
+            remaining = interval if deadline is None else deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            time.sleep(min(interval, remaining))
+            # Inspect the final poll before reporting a timeout, so a result
+            # arriving during the last sleep is still returned.
             self.reload()
-            if maxWait > 0:
-                maxWait -= interval
-                if maxWait <= 0:
-                    return False
         return True
 
     def is_done(self, reload_from_server = False):

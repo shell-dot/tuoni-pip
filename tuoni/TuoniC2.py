@@ -3,11 +3,15 @@ import time
 import requests
 import json
 import threading
-import shutil
-import base64
 import inspect
+import math
+import weakref
+import base64
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
+from urllib3.exceptions import ReadTimeoutError
 from tuoni.TuoniExceptions import *
 from tuoni.TuoniListenerPlugin import *
 from tuoni.TuoniListener import *
@@ -23,6 +27,17 @@ from tuoni.TuoniDataCredential import *
 from tuoni.TuoniJob import *
 from tuoni.TuoniCommandPlugin import *
 from tuoni.TuoniCommandTemplate import *
+from tuoni.TuoniNote import TuoniNote
+
+
+@dataclass(frozen=True, repr=False)
+class _AuthenticationSession:
+    url: str
+    access_token: str
+    refresh_token: str
+    refresh_at: float
+    refresh_expires_at: datetime
+    identity: object
 
 
 class TuoniC2:
@@ -30,17 +45,33 @@ class TuoniC2:
     The primary class for establishing connections to and managing interactions with the Tuoni server. It provides functionality for controlling server operations and facilitating communication.
 
     Args:
-        verify (str | bool) [default = False]: A flag to enable or disable SSL verification. If a string is provided, it is treated as the path to a CA bundle file.
+        verify (str | bool): Defaults to False to accept self-signed certificates.
+            True enables certificate verification; a string selects a CA bundle.
+            The setting applies to both REST and WebSockets.
+        timeout (float | tuple[float, float]): HTTP connection/read timeout in
+            seconds. Defaults to (10, 60). A single number applies to both.
     """
-    def __init__(self, verify: str | bool = False):
-        self._token: str = None
-        self._url: str = None
+    def __init__(self, verify: str | bool = False, timeout=(10, 60)):
+        self._auth = None
+        self._auth_lock = threading.RLock()
+        self._websockets = weakref.WeakSet()
         self._monitoring_threads: list = []
         self._set_verify(verify)
+        values = timeout if isinstance(timeout, tuple) else (timeout, timeout)
+        if len(values) != 2 or any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or value <= 0 for value in values
+        ):
+            raise ValueError("timeout must be a positive number or (connect, read) pair")
+        self._timeout = values
 
     def login(self, url: str, username: str, password: str):
         """
-        Login to the Tuoni server.
+        Log in using v2 authentication. Passwords are not retained.
+
+        Access tokens refresh automatically before expiry. Refresh sessions have
+        a fixed server-provided deadline, after which login is required again.
+        A successful login disconnects WebSockets belonging to the previous login.
 
         Args:
             url (str): The URL of the Tuoni server to connect to.
@@ -49,57 +80,230 @@ class TuoniC2:
 
         Examples:
             >>> tuoni_server = TuoniC2()
-            # Disabling SSL verification
-            >>> tuoni_server = TuoniC2(verify=False)
-            # Set path for CA bunle
+            # Enable SSL verification using the standard trust store
+            >>> tuoni_server = TuoniC2(verify=True)
+            # Set path for CA bundle
             >>> tuoni_server = TuoniC2(verify="/path/to/ca_bundle.pem")
             # Login to the server
             >>> tuoni_server.login("https://localhost:8443", "my_user", "S3cr37")
 
 
         """
-        headers = {
-            "Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('utf-8')
-        }
+        url = url.rstrip("/")
+        with self._auth_lock:
+            started = time.monotonic()
+            with self._send_request(
+                "POST", f"{url}/api/v2/auth/login",
+                headers={"Authorization": "Basic " + base64.b64encode(
+                    f"{username}:{password}".encode("utf-8")
+                ).decode("ascii")},
+            ) as response:
+                self._raise_for_status(response, "POST", f"{url}/api/v2/auth/login")
+                auth = self._parse_tokens(response, url, started, object())
+            previous_connections = list(self._websockets)
+            self._auth = auth
+        for connection in previous_connections:
+            connection.disconnect()
 
-        response = requests.post(f"{url}/api/v1/auth/login", headers=headers, verify=self._verify)
-        if response.status_code < 200 or response.status_code >= 300:
-            raise ExceptionTuoniAuthentication(response.text)
-        self._token = response.text
-        self._url = url
+    def refresh(self):
+        """Explicitly refresh, for example after permissions have been granted.
 
-    def _request_check(self):
-        if self._token is None:
-            raise ExceptionTuoniAuthentication("You have not done the login")
+        All refreshes are serialized. A failed or ambiguous rotation invalidates
+        the local session; log in again instead of retrying the old refresh token.
+        """
+        with self._auth_lock:
+            self._require_auth()
+            self._refresh_locked()
 
-    def _set_verify(self, verify: str | bool):
-        self._verify = False
-        if isinstance(verify, bool) and verify:
-            self._verify = True
-        elif isinstance(verify, bool) and not verify:
-            self._verify = False
-        elif isinstance(verify, str):
-            if Path(verify).is_file():
-                self._verify = verify
-            else:
-                raise Exception("The path to the CA bundle is not valid")
+    def logout(self):
+        """Revoke the refresh session, clear local tokens and disconnect WebSockets.
 
+        Local logout completes even if the server request fails; that failure is
+        still raised. Already-issued access JWTs remain valid until their expiry.
+        """
+        with self._auth_lock:
+            auth = self._auth
+            self._auth = None
+            connections = list(self._websockets)
+        for connection in connections:
+            connection.disconnect()
+        if auth is not None:
+            url = f"{auth.url}/api/v2/auth/logout"
+            with self._send_request("POST", url, json={"refreshToken": auth.refresh_token}) as response:
+                self._raise_for_status(response, "POST", url)
+
+    def _require_auth(self, identity=None):
+        if self._auth is None or (identity is not None and self._auth.identity is not identity):
+            raise ExceptionTuoniAuthentication("Log in again to establish a session", requires_login=True)
+
+    def _get_auth(self, identity=None):
+        with self._auth_lock:
+            self._require_auth(identity)
+            if self._needs_refresh(self._auth):
+                self._refresh_locked()
+            return self._auth
 
     @staticmethod
-    def _raise_request_exception(result_msg: str):
+    def _needs_refresh(auth):
+        return time.monotonic() >= auth.refresh_at
+
+    def _session_is_current(self, identity):
+        with self._auth_lock:
+            return self._auth is not None and self._auth.identity is identity
+
+    def _register_websocket(self, connection):
+        with self._auth_lock:
+            auth = self._get_auth()
+            self._websockets.add(connection)
+            return auth
+
+    def _refresh_after_rejection(self, rejected):
+        with self._auth_lock:
+            self._require_auth(rejected.identity)
+            # Another request may already have rotated this token.
+            if self._auth is rejected:
+                self._refresh_locked()
+            return self._auth
+
+    def _invalidate_auth(self, rejected):
+        with self._auth_lock:
+            if self._auth is rejected:
+                self._auth = None
+
+    def _refresh_locked(self):
+        auth = self._auth
+        if datetime.now(timezone.utc) >= auth.refresh_expires_at:
+            self._auth = None
+            raise ExceptionTuoniAuthentication("Refresh session expired; log in again", requires_login=True)
+        url = f"{auth.url}/api/v2/auth/refresh"
+        # No failure or interruption after sending may leave this token reusable.
+        # Other callers cannot observe the transition while this lock is held.
+        self._auth = None
         try:
-            data = json.loads(result_msg)
-            msg = data.get("message", result_msg)
-        except json.JSONDecodeError:
-            msg = result_msg
-        raise ExceptionTuoniRequestFailed(msg)
+            started = time.monotonic()
+            with self._send_request("POST", url, json={"refreshToken": auth.refresh_token}) as response:
+                self._raise_for_status(response, "POST", url)
+                replacement = self._parse_tokens(response, auth.url, started, auth.identity)
+            if replacement.refresh_expires_at != auth.refresh_expires_at:
+                raise ExceptionTuoniAuthentication("Server changed the refresh-session deadline")
+            self._auth = replacement
+        except ExceptionTuoniRequestFailed as error:
+            # Even a timeout may mean the server consumed the token. Never reuse it.
+            self._auth = None
+            error.requires_login = True
+            error.message = f"{error.message}. Refresh failed; log in again before continuing"
+            error.args = (error.message,)
+            raise
+
+    @staticmethod
+    def _parse_tokens(response, url, started, identity):
+        try:
+            data = response.json()
+            access = data["accessToken"]
+            refresh = data["refreshToken"]
+            lifetime = data["expiresIn"]
+            deadline = datetime.fromisoformat(data["refreshExpiresAt"].replace("Z", "+00:00"))
+            if (data["tokenType"] != "Bearer"
+                    or not isinstance(access, str) or not access
+                    or not isinstance(refresh, str) or not refresh
+                    or isinstance(lifetime, bool) or not isinstance(lifetime, (int, float))
+                    or not math.isfinite(lifetime) or lifetime <= 0
+                    or deadline.tzinfo is None):
+                raise ValueError("Invalid token fields")
+            # Use elapsed time from the request start; issuer and client clocks
+            # can differ, so JWT wall-clock claims cannot set this deadline.
+            return _AuthenticationSession(
+                url, access, refresh, started + lifetime - min(30, lifetime / 10),
+                deadline, identity,
+            )
+        except (KeyError, TypeError, ValueError, AttributeError):
+            # Never attach a successful token response to an exception.
+            raise ExceptionTuoniAuthentication("Invalid authentication response from server") from None
+
+    def _set_verify(self, verify: str | bool):
+        if isinstance(verify, bool):
+            self._verify = verify
+        elif isinstance(verify, str):
+            if Path(verify).is_file():
+                self._verify = str(Path(verify).resolve())
+            else:
+                raise ValueError("The path to the CA bundle is not valid")
+        else:
+            raise TypeError("verify must be a boolean or a CA bundle path")
+
+
+    @classmethod
+    def _raise_for_status(cls, response, method, url):
+        if 200 <= response.status_code < 300:
+            return
+        try:
+            try:
+                body = response.json()
+            except ValueError:
+                body = response.text
+            message = (body.get("message") or body.get("error")) if isinstance(body, dict) else body
+            message = str(message) if message else response.reason or f"HTTP {response.status_code}"
+            error_type = {401: ExceptionTuoniAuthentication, 403: ExceptionTuoniAuthorization}.get(
+                response.status_code, ExceptionTuoniRequestFailed
+            )
+            raise error_type(
+                f"{method} {url}: {message}", status_code=response.status_code,
+                method=method, url=url, response_body=body, response_headers=response.headers,
+            )
+        except requests.RequestException as error:
+            failure = cls._transport_error(error, method, url)
+            failure.status_code = response.status_code
+            failure.response_headers = dict(response.headers)
+            raise failure from error
+        finally:
+            response.close()
+
+    @staticmethod
+    def _is_timeout(error):
+        # Requests wraps response-body read timeouts in ConnectionError.
+        return isinstance(error, requests.Timeout) or (
+            isinstance(error, requests.ConnectionError)
+            and any(isinstance(cause, ReadTimeoutError) for cause in error.args)
+        )
+
+    @classmethod
+    def _transport_error(cls, error, method, url):
+        if cls._is_timeout(error):
+            return ExceptionTuoniTimeout(f"{method} {url}: request timed out", method=method, url=url)
+        return ExceptionTuoniTransport(f"{method} {url}: {error}", method=method, url=url)
+
+    def _send_request(self, method, url, **kwargs):
+        try:
+            return requests.request(
+                method, url, verify=self._verify, timeout=self._timeout,
+                allow_redirects=True, **kwargs,
+            )
+        except requests.RequestException as error:
+            raise self._transport_error(error, method, url) from error
 
     def _make_request(self, method: str, uri: str, **kwargs):
-        self._request_check()
-        headers = {"Authorization": f"Bearer {self._token}"}
-        response = requests.request(method, f"{self._url}{uri}", headers=headers, verify=self._verify, **kwargs)
-        if response.status_code < 200 or response.status_code >= 300:
-            self._raise_request_exception(response.text)
+        auth = self._get_auth()
+        url = f"{auth.url}{uri}"
+        response = self._send_request(method, url, headers={"Authorization": f"Bearer {auth.access_token}"}, **kwargs)
+        # Only reads are replayed. Mutations and uploads may have side effects or
+        # consumed streams; their caller decides whether to retry after a 401.
+        if response.status_code == 401:
+            try:
+                auth = self._refresh_after_rejection(auth)
+            except Exception:
+                response.close()
+                raise
+            if method in {"GET", "HEAD", "OPTIONS"}:
+                response.close()
+                response = self._send_request(method, url, headers={"Authorization": f"Bearer {auth.access_token}"}, **kwargs)
+                if response.status_code == 401:
+                    self._invalidate_auth(auth)
+        try:
+            self._raise_for_status(response, method, url)
+        except ExceptionTuoniRequestFailed as error:
+            if response.status_code == 401:
+                error.requires_login = not self._session_is_current(auth.identity)
+            raise
         return response
 
     def request_get(self, uri: str, result_as_json: bool = True, result_as_bytes: bool = False):
@@ -131,9 +335,13 @@ class TuoniC2:
             uri (str): The URI endpoint to send the request to.
             file_name (str): The name of the file where the response will be saved.
         """
-        response = self._make_request("GET", uri, stream=True)
-        with open(file_name, 'wb') as out_file:
-            shutil.copyfileobj(response.raw, out_file)
+        with self._make_request("GET", uri, stream=True) as response:
+            try:
+                with open(file_name, 'wb') as out_file:
+                    for chunk in response.iter_content(chunk_size=65536):
+                        out_file.write(chunk)
+            except requests.RequestException as error:
+                raise self._transport_error(error, "GET", response.url) from error
 
     def request_post(self, uri: str, json_data: dict = None, files: dict = None):
         """
@@ -476,6 +684,69 @@ class TuoniC2:
         if template_data:
             return TuoniCommandTemplate(template_data, self)
         return None
+
+    def load_command_notes(self, agent_guid, command_id, page=0, pageSize=100,
+                           label=None, include_archived=False):
+        """Load one page of notes for a visible command, ordered oldest first.
+
+        Requires the server's v2 command-notes API and ``VIEW_RESOURCES``.
+
+        Args:
+            agent_guid (str): UUID of the command's agent.
+            command_id (int): Command identifier.
+            page (int): Zero-based page number. Defaults to 0.
+            pageSize (int): Notes per page, from 1 to 1000. Defaults to 100.
+            label (str | None): Exact, case-sensitive label filter. None omits it.
+            include_archived (bool): Include archived notes. Defaults to False.
+
+        Returns:
+            list[TuoniNote]: Notes in the requested page, or an empty list.
+                Pagination metadata is not returned; pages are not fetched
+                automatically.
+        """
+        uri = (f"/api/v2/agents/{quote(str(agent_guid), safe='')}/commands/"
+               f"{quote(str(command_id), safe='')}/notes")
+        query = {"page": page, "pageSize": pageSize,
+                 "includeArchived": str(include_archived).lower()}
+        if label is not None:
+            query["label"] = label
+        data = self.request_get(f"{uri}?{urlencode(query)}")
+        return [TuoniNote(note, self) for note in data["items"]]
+
+    def load_command_note(self, agent_guid, command_id, note_id):
+        """Retrieve a command note, including an archived note.
+
+        Args:
+            agent_guid (str): UUID of the command's agent.
+            command_id (int): Command identifier.
+            note_id (str): Note UUID.
+
+        Returns:
+            TuoniNote: The note. Requires ``VIEW_RESOURCES``; a missing or
+                mismatched command/note raises an HTTP 404 request exception.
+        """
+        uri = (f"/api/v2/agents/{quote(str(agent_guid), safe='')}/commands/"
+               f"{quote(str(command_id), safe='')}/notes/{quote(str(note_id), safe='')}")
+        return TuoniNote(self.request_get(uri), self)
+
+    def add_command_note(self, agent_guid, command_id, label, content):
+        """Create a note on a visible command. Requires ``SEND_COMMANDS``.
+
+        Args:
+            agent_guid (str): UUID of the command's agent.
+            command_id (int): Command identifier.
+            label (str): Nonblank label, limited to 128 characters. The server
+                trims surrounding whitespace.
+            content (str): Nonblank content, limited to 2,000 characters.
+                Whitespace, including newlines, is preserved.
+
+        Returns:
+            TuoniNote: The created note, including its audit events.
+        """
+        uri = (f"/api/v2/agents/{quote(str(agent_guid), safe='')}/commands/"
+               f"{quote(str(command_id), safe='')}/notes")
+        data = self.request_post(uri, {"label": label, "content": content})
+        return TuoniNote(data, self)
 
     def load_aliases(self):
         """
@@ -916,7 +1187,7 @@ class TuoniC2:
         """
         return self.request_put(f"/api/v1/setting/{key}", {"value": value})
 
-    def connect_websocket(self, timeout: float = 10):
+    def connect_websocket(self, timeout: float = 10, on_error=None):
         """
         Connect to the Tuoni server's real-time WebSocket endpoint.
 
@@ -924,6 +1195,8 @@ class TuoniC2:
 
         Args:
             timeout (float): Seconds to wait for the STOMP handshake to complete.
+            on_error (callable): Optional callback(exception) for connection or
+                permission failures, including failures during reconnection.
 
         Returns:
             TuoniWebSocket: A connected WebSocket client ready for subscriptions.
@@ -938,9 +1211,11 @@ class TuoniC2:
         """
         from tuoni.TuoniWebSocket import TuoniWebSocket
         ws = TuoniWebSocket(self)
+        if on_error is not None:
+            ws.on_error(on_error)
         connected = ws.connect(timeout=timeout)
         if not connected:
-            raise Exception("Failed to connect to Tuoni WebSocket within timeout")
+            raise ws.last_error or ExceptionTuoniTimeout("Failed to connect to Tuoni WebSocket within timeout")
         return ws
 
     def let_it_run(self):

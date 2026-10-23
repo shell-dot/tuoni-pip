@@ -96,7 +96,10 @@ class TuoniAgent:
         if execution_conf is not None:
             data["execConf"] = execution_conf
         data = self.c2.request_post(f"/api/v1/agents/{self.guid}/commands", data, files)
-        return TuoniCommand(data, self.c2)
+        command = TuoniCommand(data, self.c2)
+        if command.agentGuid is None:
+            command.agentGuid = self.guid
+        return command
 
     def get_commands(self):
         """
@@ -112,6 +115,8 @@ class TuoniAgent:
         for command_nr in commands_data:
             command_data = commands_data[command_nr]
             command_obj = TuoniCommand(command_data, self.c2)
+            if command_obj.agentGuid is None:
+                command_obj.agentGuid = self.guid
             commands.append(command_obj)
         return commands
 

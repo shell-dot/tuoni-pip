@@ -30,6 +30,7 @@ from .TuoniCommandTemplate import TuoniCommandTemplate
 from .TuoniPayload import TuoniPayload
 from .TuoniPayloadTemplate import TuoniPayloadTemplate
 from .TuoniWebSocket import TuoniWebSocket
+from .TuoniNote import TuoniNote
 
 
 __all__ = [
@@ -54,8 +55,13 @@ __all__ = [
     "TuoniPayload",
     "TuoniPayloadTemplate",
     "TuoniWebSocket",
+    "TuoniNote",
     'ExceptionTuoniAuthentication',
+    'ExceptionTuoniAuthorization',
     'ExceptionTuoniRequestFailed',
+    'ExceptionTuoniTransport',
+    'ExceptionTuoniTimeout',
+    'ExceptionTuoniWebSocket',
     'ExceptionTuoniDeleted',
     
     'ExecutionNew',
